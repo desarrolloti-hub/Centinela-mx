@@ -1,39 +1,46 @@
-// tareas.js - VERSIÓN CON FORMULARIO INLINE (COMO EN LA IMAGEN)
-// BASADO EN LAS IMÁGENES DE REFERENCIA
-// CON REGISTRO DE BITÁCORA
+// tareas.js - VERSIÓN COMPLETAMENTE ASÍNCRONA CON TIEMPO REAL
 
 import { TareaManager } from '/clases/tarea.js';
 import { UserManager } from '/clases/user.js';
 import { AreaManager } from '/clases/area.js';
+import { CategoriaManager } from '/clases/categoria.js';
 
-let historialManager = null; // ✅ NUEVO: Para registrar actividades
+let historialManager = null;
 
 class TareasController {
     constructor() {
+        // Estado inicial
+        this.initialized = false;
+        this.initPromise = null;
+        
+        // Managers
         this.tareaManager = null;
         this.userManager = null;
         this.areaManager = null;
+        this.categoriaManager = null;
         this.usuarioActual = null;
-
+        
         // Datos
         this.todasLasTareas = [];
         this.tareasFiltradas = [];
         this.tipoActual = 'todas';
         this.terminoBusqueda = '';
-
+        this.cargando = false;
+        
         // Cachés
         this.cacheUsuarios = {};
         this.cacheAreas = {};
         this.usuariosDisponibles = [];
         this.areasDisponibles = [];
-
+        this.categoriasDisponibles = [];
+        
         // Estado del formulario
         this.modoEdicion = false;
         this.tareaActual = null;
         this.tipoSeleccionado = 'personal';
         this.itemsActuales = [];
-
-        // Cache para creación
+        
+        // Datos adicionales
         this.usuarios = [];
         this.usuariosFiltrados = [];
         this.areas = [];
@@ -41,193 +48,102 @@ class TareasController {
         this.cargos = [];
         this.cargosFiltrados = [];
         this.areaSeleccionada = null;
-
+        this.categoriaSeleccionada = null;
+        
+        // Modal
+        this.modalVisible = false;
+        this.tareaModalActual = null;
+        
+        // Tiempo real
+        this.unsubscribeTareas = null;
+        this.actualizacionEnProceso = false;
+        
+        // Iniciar
         this.init();
     }
-
+    
+    // =============================================
+    // INICIALIZACIÓN ASÍNCRONA PRINCIPAL
+    // =============================================
+    
     async init() {
+        if (this.initPromise) return this.initPromise;
+        this.initPromise = this._initAsync();
+        return this.initPromise;
+    }
+    
+    async _initAsync() {
         try {
-            // ✅ NUEVO: Inicializar historialManager
             await this._initHistorial();
-
+            
             this.userManager = new UserManager();
             this.areaManager = new AreaManager();
+            this.categoriaManager = new CategoriaManager();
             const { TareaManager } = await import('/clases/tarea.js');
             this.tareaManager = new TareaManager();
-
-            await this._esperarUsuario();
-
-            if (!this.usuarioActual) {
+            
+            const usuarioObtenido = await this._obtenerUsuarioAsincrono();
+            if (!usuarioObtenido) {
                 window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
                 return;
             }
-
-            localStorage.setItem('adminInfo', JSON.stringify({
-                id: this.usuarioActual.id,
-                uid: this.usuarioActual.uid,
-                nombreCompleto: this.usuarioActual.nombreCompleto,
-                organizacion: this.usuarioActual.organizacion,
-                organizacionCamelCase: this.usuarioActual.organizacionCamelCase,
-                rol: this.usuarioActual.rol,
-                correoElectronico: this.usuarioActual.correoElectronico,
-                areaAsignadaId: this.usuarioActual.areaAsignadaId,
-                cargoId: this.usuarioActual.cargoId
-            }));
-
-            await this._cargarUsuarios();
-            await this._cargarAreas();
-            await this._cargarTareas();
-
+            
+            this._guardarUsuarioEnLocalStorage();
+            
+            await this._cargarDatosAuxiliares();
+            
+            this._suscribirATareasTiempoReal();
+            
             this._configurarEventos();
-
+            this._crearModalTarea();
+            
+            this.initialized = true;
+            
         } catch (error) {
+         
             this._mostrarError(error.message);
         }
     }
-
-    // ✅ NUEVO: Inicializar historialManager
+    
     async _initHistorial() {
         try {
             const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
             historialManager = new HistorialUsuarioManager();
-            console.log('📋 HistorialManager inicializado para tareas');
         } catch (error) {
-            console.error('Error inicializando historialManager:', error);
+  
         }
     }
-
-    // ✅ NUEVO: Registrar creación de tarea
-    async _registrarCreacionTarea(tareaData, resultado) {
-        if (!historialManager) return;
-
-        try {
-            const cantidadItems = tareaData.items ? Object.keys(tareaData.items).length : 0;
-            let destinatariosInfo = '';
-
-            if (tareaData.tipo === 'compartida' && tareaData.usuariosCompartidosIds) {
-                destinatariosInfo = `${tareaData.usuariosCompartidosIds.length} usuarios`;
-            } else if (tareaData.tipo === 'area' && tareaData.areaId) {
-                const area = this.areasDisponibles.find(a => a.id === tareaData.areaId);
-                destinatariosInfo = `área ${area?.nombreArea || tareaData.areaId}`;
-                if (tareaData.cargosIds && tareaData.cargosIds.length > 0) {
-                    destinatariosInfo += ` (${tareaData.cargosIds.length} cargos específicos)`;
-                }
-            } else if (tareaData.tipo === 'global') {
-                destinatariosInfo = 'todos los usuarios de la organización';
-            } else {
-                destinatariosInfo = 'solo para mí';
-            }
-
-            await historialManager.registrarActividad({
-                usuario: this.usuarioActual,
-                tipo: 'crear',
-                modulo: 'tareas',
-                descripcion: `Creó nota: ${tareaData.nombreActividad}`,
-                detalles: {
-                    tareaId: resultado?.id || 'pendiente',
-                    tareaTitulo: tareaData.nombreActividad,
-                    tareaTipo: tareaData.tipo === 'global' ? 'general' : tareaData.tipo,
-                    destinatarios: destinatariosInfo,
-                    cantidadItems: cantidadItems,
-                    tieneRecordatorio: tareaData.tieneRecordatorio || false,
-                    fechaCreacion: new Date().toISOString()
-                }
-            });
-            console.log(`✅ Creación de nota "${tareaData.nombreActividad}" registrada en bitácora`);
-        } catch (error) {
-            console.error('Error registrando creación de tarea:', error);
-        }
-    }
-
-    // ✅ NUEVO: Registrar edición de tarea
-    async _registrarEdicionTarea(tareaOriginal, tareaActualizada, cambios) {
-        if (!historialManager) return;
-
-        try {
-            await historialManager.registrarActividad({
-                usuario: this.usuarioActual,
-                tipo: 'editar',
-                modulo: 'tareas',
-                descripcion: `Editó nota: ${tareaActualizada.nombreActividad || tareaOriginal.nombreActividad}`,
-                detalles: {
-                    tareaId: tareaOriginal.id,
-                    tareaTituloOriginal: tareaOriginal.nombreActividad,
-                    tareaTituloActualizado: tareaActualizada.nombreActividad,
-                    cambios: cambios,
-                    fechaEdicion: new Date().toISOString()
-                }
-            });
-            console.log(`✅ Edición de nota "${tareaOriginal.nombreActividad}" registrada en bitácora`);
-        } catch (error) {
-            console.error('Error registrando edición de tarea:', error);
-        }
-    }
-
-    // ✅ NUEVO: Registrar eliminación de tarea
-    async _registrarEliminacionTarea(tarea) {
-        if (!historialManager) return;
-
-        try {
-            const cantidadItems = tarea.items ? Object.keys(tarea.items).length : 0;
-
-            await historialManager.registrarActividad({
-                usuario: this.usuarioActual,
-                tipo: 'eliminar',
-                modulo: 'tareas',
-                descripcion: `Eliminó nota: ${tarea.nombreActividad}`,
-                detalles: {
-                    tareaId: tarea.id,
-                    tareaTitulo: tarea.nombreActividad,
-                    tareaTipo: tarea.tipo === 'global' ? 'general' : tarea.tipo,
-                    cantidadItems: cantidadItems,
-                    fechaEliminacion: new Date().toISOString()
-                }
-            });
-            console.log(`✅ Eliminación de nota "${tarea.nombreActividad}" registrada en bitácora`);
-        } catch (error) {
-            console.error('Error registrando eliminación de tarea:', error);
-        }
-    }
-
-    // ✅ NUEVO: Registrar marcado de item
-    async _registrarMarcadoItem(tarea, itemId, itemTexto, completado) {
-        if (!historialManager) return;
-
-        try {
-            await historialManager.registrarActividad({
-                usuario: this.usuarioActual,
-                tipo: 'editar',
-                modulo: 'tareas',
-                descripcion: completado ? 
-                    `Marcó como completado item en nota "${tarea.nombreActividad}"` : 
-                    `Desmarcó item en nota "${tarea.nombreActividad}"`,
-                detalles: {
-                    tareaId: tarea.id,
-                    tareaTitulo: tarea.nombreActividad,
-                    itemId: itemId,
-                    itemTexto: itemTexto,
-                    estadoAnterior: completado ? 'pendiente' : 'completado',
-                    estadoNuevo: completado ? 'completado' : 'pendiente',
-                    fechaCambio: new Date().toISOString()
-                }
-            });
-            console.log(`✅ Marcado de item en nota "${tarea.nombreActividad}" registrado en bitácora`);
-        } catch (error) {
-            console.error('Error registrando marcado de item:', error);
-        }
-    }
-
-    async _esperarUsuario() {
-        for (let i = 0; i < 30; i++) {
+    
+    async _obtenerUsuarioAsincrono() {
+        let intentos = 0;
+        const maxIntentos = 50;
+        
+        while (intentos < maxIntentos) {
             if (this.userManager.currentUser) {
                 this.usuarioActual = this.userManager.currentUser;
                 return true;
             }
             await new Promise(resolve => setTimeout(resolve, 100));
+            intentos++;
         }
+        
         return this._cargarUsuarioLocalStorage();
     }
-
+    
+    _guardarUsuarioEnLocalStorage() {
+        localStorage.setItem('adminInfo', JSON.stringify({
+            id: this.usuarioActual.id,
+            uid: this.usuarioActual.uid,
+            nombreCompleto: this.usuarioActual.nombreCompleto,
+            organizacion: this.usuarioActual.organizacion,
+            organizacionCamelCase: this.usuarioActual.organizacionCamelCase,
+            rol: this.usuarioActual.rol,
+            correoElectronico: this.usuarioActual.correoElectronico,
+            areaAsignadaId: this.usuarioActual.areaAsignadaId,
+            cargoId: this.usuarioActual.cargoId
+        }));
+    }
+    
     _cargarUsuarioLocalStorage() {
         try {
             const adminInfo = localStorage.getItem('adminInfo');
@@ -251,152 +167,258 @@ class TareasController {
             return false;
         }
     }
-
-    _generarCamelCase(texto) {
-        if (!texto) return 'sinOrganizacion';
-        return texto.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase()).replace(/[^a-zA-Z0-9]/g, '');
+    
+    async _cargarDatosAuxiliares() {
+        this._mostrarCarga();
+        
+        const [usuarios, areas, categorias] = await Promise.all([
+            this._cargarUsuariosAsync(),
+            this._cargarAreasAsync(),
+            this._cargarCategoriasAsync()
+        ]);
+        
+        this.usuariosDisponibles = usuarios;
+        this.areasDisponibles = areas;
+        this.categoriasDisponibles = categorias;
     }
-
-    async _cargarUsuarios() {
+    
+    async _cargarUsuariosAsync() {
         try {
-            if (!this.usuarioActual?.organizacionCamelCase) return;
-
+            if (!this.usuarioActual?.organizacionCamelCase) return [];
+            
             const colaboradores = await this.userManager.getColaboradoresByOrganizacion(
                 this.usuarioActual.organizacionCamelCase, true
             );
             const administradores = await this.userManager.getAdministradores(true);
-
-            this.usuariosDisponibles = [
+            
+            const usuarios = [
                 ...colaboradores.filter(u => u.id !== this.usuarioActual.id),
-                ...administradores.filter(a => a.organizacionCamelCase === this.usuarioActual.organizacionCamelCase && a.id !== this.usuarioActual.id)
+                ...administradores.filter(a => 
+                    a.organizacionCamelCase === this.usuarioActual.organizacionCamelCase && 
+                    a.id !== this.usuarioActual.id
+                )
             ];
-
-            this.usuariosDisponibles.forEach(u => {
+            
+            usuarios.forEach(u => {
                 this.cacheUsuarios[u.id] = u.nombreCompleto || 'Usuario';
             });
-
+            
+            return usuarios;
+            
         } catch (error) {
-            this.usuariosDisponibles = [];
+        
+            return [];
         }
     }
-
-    async _cargarAreas() {
+    
+    async _cargarAreasAsync() {
         try {
-            if (!this.usuarioActual?.organizacionCamelCase) return;
-
-            this.areasDisponibles = await this.areaManager.getAreasByOrganizacion(
+            if (!this.usuarioActual?.organizacionCamelCase) return [];
+            
+            const areas = await this.areaManager.getAreasByOrganizacion(
                 this.usuarioActual.organizacionCamelCase
             );
-
-            this.areasDisponibles = this.areasDisponibles.filter(a => a.estado === 'activa');
-
+            
+            return areas.filter(a => a.estado === 'activa');
+            
         } catch (error) {
-            this.areasDisponibles = [];
+         
+            return [];
         }
     }
-
-    async _cargarTareas() {
+    
+    async _cargarCategoriasAsync() {
         try {
-            this._mostrarCarga();
-
-            if (!this.usuarioActual?.organizacionCamelCase) {
-                throw new Error('No hay organización definida');
+            if (!this.usuarioActual?.organizacionCamelCase) return [];
+            
+            return await this.categoriaManager.obtenerCategoriasPorOrganizacion(
+                this.usuarioActual.organizacionCamelCase
+            );
+            
+        } catch (error) {
+      
+            return [];
+        }
+    }
+    
+    _suscribirATareasTiempoReal() {
+        if (!this.usuarioActual?.organizacionCamelCase) return;
+        
+        if (this.unsubscribeTareas) {
+            this.unsubscribeTareas();
+        }
+        
+        this.unsubscribeTareas = this.tareaManager.suscribirATareas(
+            this.usuarioActual.organizacionCamelCase,
+            (tareasActualizadas) => {
+                const tareasVisibles = tareasActualizadas.filter(tarea => 
+                    this._esTareaVisible(tarea)
+                );
+                
+                this.todasLasTareas = tareasVisibles;
+                this._aplicarFiltros();
+                this._mostrarNotificacionCambio();
             }
-
-            this.todasLasTareas = await this.tareaManager.getTodasLasTareas(
-                this.usuarioActual.organizacionCamelCase
-            );
-
-            this._aplicarFiltros();
-
-        } catch (error) {
-            this._mostrarErrorEnGrid(error.message);
-        }
+        );
     }
-
-    _aplicarFiltros() {
-        if (this.terminoBusqueda && this.terminoBusqueda.length >= 2) {
-            this.tareasFiltradas = this.todasLasTareas.filter(t =>
-                (t.nombreActividad && t.nombreActividad.toLowerCase().includes(this.terminoBusqueda)) ||
-                (t.descripcion && t.descripcion.toLowerCase().includes(this.terminoBusqueda))
-            );
-        } else {
-            this.tareasFiltradas = [...this.todasLasTareas];
+    
+    _mostrarNotificacionCambio() {
+        if (this.actualizacionEnProceso) return;
+        
+        this.actualizacionEnProceso = true;
+        
+        const grid = document.getElementById('tareasGrid');
+        if (grid) {
+            grid.style.opacity = '0.7';
+            setTimeout(() => {
+                if (grid) grid.style.opacity = '1';
+            }, 300);
         }
-
+        
+        setTimeout(() => {
+            this.actualizacionEnProceso = false;
+        }, 500);
+    }
+    
+    // =============================================
+    // VISIBILIDAD
+    // =============================================
+    
+    _esTareaVisible(tarea) {
+        const esCreador = tarea.creadoPor === this.usuarioActual.id;
+        const esAdmin = this.usuarioActual.rol === 'administrador' || this.usuarioActual.rol === 'admin';
+        
+        if (tarea.tipo === 'personal') {
+            return esCreador;
+        }
+        
+        if (tarea.tipo === 'global' || tarea.tipo === 'general') {
+            return true;
+        }
+        
+        if (tarea.tipo === 'compartida') {
+            if (esCreador) return true;
+            return tarea.usuariosCompartidosIds && tarea.usuariosCompartidosIds.includes(this.usuarioActual.id);
+        }
+        
+        if (tarea.tipo === 'area') {
+            if (esAdmin) return true;
+            if (!tarea.areaId) return false;
+            if (!this.usuarioActual.areaAsignadaId) return false;
+            
+            const perteneceAlArea = tarea.areaId === this.usuarioActual.areaAsignadaId;
+            
+            if (tarea.cargosIds && tarea.cargosIds.length > 0) {
+                return perteneceAlArea && tarea.cargosIds.includes(this.usuarioActual.cargoId);
+            }
+            
+            return perteneceAlArea;
+        }
+        
+        return false;
+    }
+    
+    // =============================================
+    // FILTRADO Y RENDERIZADO
+    // =============================================
+    
+    _aplicarFiltros() {
+        let tareasFiltradas = [...this.todasLasTareas];
+        
+        if (this.terminoBusqueda && this.terminoBusqueda.length >= 2) {
+            const term = this.terminoBusqueda.toLowerCase();
+            tareasFiltradas = tareasFiltradas.filter(t =>
+                (t.nombreActividad && t.nombreActividad.toLowerCase().includes(term)) ||
+                (t.descripcion && t.descripcion.toLowerCase().includes(term))
+            );
+        }
+        
         if (this.tipoActual !== 'todas') {
-            this.tareasFiltradas = this.tareasFiltradas.filter(t => {
+            tareasFiltradas = tareasFiltradas.filter(t => {
                 if (this.tipoActual === 'generales') {
                     return t.tipo === 'global' || t.tipo === 'general';
                 }
                 if (this.tipoActual === 'personales') {
-                    return t.tipo === 'personal' && t.creadoPor === this.usuarioActual.id;
+                    return t.tipo === 'personal';
                 }
                 if (this.tipoActual === 'compartidas') {
-                    if (t.tipo !== 'compartida') return false;
-                    return t.creadoPor === this.usuarioActual.id ||
-                        (t.usuariosCompartidosIds && t.usuariosCompartidosIds.includes(this.usuarioActual.id));
+                    return t.tipo === 'compartida';
                 }
                 if (this.tipoActual === 'area') {
-                    if (t.tipo !== 'area') return false;
-                    if (t.creadoPor === this.usuarioActual.id) return true;
-                    if (t.areaId && t.areaId !== this.usuarioActual.areaAsignadaId) return false;
-                    if (t.cargosIds && t.cargosIds.length > 0) {
-                        return t.cargosIds.includes(this.usuarioActual.cargoId);
-                    }
-                    return true;
+                    return t.tipo === 'area';
                 }
                 return true;
             });
         }
-
+        
+        tareasFiltradas.sort((a, b) => b.fechaCreacion - a.fechaCreacion);
+        
+        this.tareasFiltradas = tareasFiltradas;
         this._renderizarTareas();
     }
-
+    
     _renderizarTareas() {
         const container = document.getElementById('tareasGrid');
         if (!container) return;
-
+        
         if (!this.tareasFiltradas || this.tareasFiltradas.length === 0) {
             container.innerHTML = this._getEmptyStateHTML();
             return;
         }
-
+        
         let html = '';
         this.tareasFiltradas.forEach(tarea => {
             html += this._crearTarjetaNota(tarea);
         });
-
+        
         container.innerHTML = html;
-
+        
+        container.querySelectorAll('.tarea-card').forEach(card => {
+            const tareaId = card.dataset.tareaId;
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.btn-card-action')) return;
+                if (e.target.closest('.tarea-item-checkbox')) return;
+                
+                const tarea = this.todasLasTareas.find(t => t.id === tareaId);
+                if (tarea) {
+                    this._abrirModalTarea(tarea);
+                }
+            });
+        });
+        
         container.querySelectorAll('.btn-card-action.edit').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 const tareaId = btn.dataset.id;
-                this._abrirFormularioEdicion(tareaId);
+                await this._abrirFormularioEdicion(tareaId);
             });
         });
-
+        
         container.querySelectorAll('.btn-card-action.delete').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 const tareaId = btn.dataset.id;
-                this._eliminarTarea(tareaId);
+                await this._eliminarTarea(tareaId);
             });
         });
-
+        
+        // Eventos de checkbox en tarjetas
         container.querySelectorAll('.tarea-item-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
+            checkbox.addEventListener('change', async (e) => {
                 e.stopPropagation();
                 const tareaId = checkbox.dataset.tareaId;
                 const itemId = checkbox.dataset.itemId;
-                this._marcarItem(tareaId, itemId, checkbox.checked);
+                const completado = checkbox.checked;
+                
+                checkbox.disabled = true;
+                await this._marcarItem(tareaId, itemId, completado);
+                checkbox.disabled = false;
             });
         });
     }
-
+    
     _crearTarjetaNota(tarea) {
         const tipoClass = {
             'global': 'tipo-general',
@@ -405,7 +427,7 @@ class TareasController {
             'compartida': 'tipo-compartida',
             'area': 'tipo-area'
         }[tarea.tipo] || 'tipo-general';
-
+        
         const tipoTexto = {
             'global': 'General',
             'general': 'General',
@@ -413,36 +435,70 @@ class TareasController {
             'compartida': 'Compartida',
             'area': 'Área'
         }[tarea.tipo] || 'General';
-
+        
         const fecha = tarea.fechaCreacion ? new Date(tarea.fechaCreacion) : new Date();
         const fechaStr = fecha.toLocaleDateString('es-MX', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit'
         });
-
+        
+        const fechaLimite = tarea.fechaLimite ? new Date(tarea.fechaLimite) : null;
+        const fechaLimiteStr = fechaLimite ? fechaLimite.toLocaleDateString('es-MX', {
+            day: '2-digit', month: '2-digit', year: 'numeric'
+        }) : null;
+        
         const esCreador = tarea.creadoPor === this.usuarioActual?.id;
+        const puedeEditar = esCreador;
+        
+        let categoriaNombre = 'Sin categoría';
+        let subcategoriaNombre = '';
+        
+        if (tarea.categoriaId && this.categoriasDisponibles) {
+            const categoria = this.categoriasDisponibles.find(c => c.id === tarea.categoriaId);
+            if (categoria) {
+                categoriaNombre = categoria.nombre;
+                if (tarea.subcategoriaId && categoria.subcategorias && categoria.subcategorias[tarea.subcategoriaId]) {
+                    subcategoriaNombre = categoria.subcategorias[tarea.subcategoriaId].nombre || '';
+                }
+            }
+        }
+        
         const items = tarea.items ? Object.values(tarea.items) : [];
-
+        const totalItems = items.length;
+        const completados = items.filter(i => i.completado).length;
+        
         let itemsPreview = '';
         if (items.length > 0) {
             itemsPreview = '<div class="tarea-items-preview">';
             items.slice(0, 3).forEach(item => {
+                const puedeDesmarcar = item.completado ? (item.marcadoPor === this.usuarioActual.id) : true;
+                const marcadoPorTexto = item.completado && item.marcadoPorNombre ? 
+                    ` <small style="font-size: 10px; color: var(--color-text-dim);">(por: ${this._escapeHTML(item.marcadoPorNombre)})</small>` : '';
+                
                 itemsPreview += `
                     <div class="tarea-item-preview ${item.completado ? 'completado' : ''}">
                         <input type="checkbox" class="tarea-item-checkbox" 
                                data-tarea-id="${tarea.id}" 
                                data-item-id="${item.id}"
-                               ${item.completado ? 'checked' : ''}>
-                        <span>${this._escapeHTML(item.texto)}</span>
+                               ${item.completado ? 'checked' : ''}
+                               ${item.completado && !puedeDesmarcar ? 'disabled' : ''}>
+                        <span>${this._escapeHTML(item.texto)}${marcadoPorTexto}</span>
                     </div>
                 `;
             });
             if (items.length > 3) {
                 itemsPreview += `<div class="tarea-mas-items">+${items.length - 3} items más</div>`;
             }
-            itemsPreview += '</div>';
+            itemsPreview += `
+                <div class="tarea-progreso">
+                    <span class="progreso-texto">${completados}/${totalItems} completados</span>
+                    <div class="progreso-bar">
+                        <div class="progreso-fill" style="width: ${totalItems > 0 ? (completados / totalItems) * 100 : 0}%"></div>
+                    </div>
+                </div>
+            </div>`;
         }
-
+        
         return `
             <div class="tarea-card" data-tarea-id="${tarea.id}">
                 <div class="tarea-header">
@@ -450,8 +506,28 @@ class TareasController {
                     <span class="tarea-tipo-badge ${tipoClass}">${tipoTexto}</span>
                 </div>
                 
+                <div class="tarea-metadatos">
+                    <div class="tarea-categoria">
+                        <i class="fas fa-tag"></i>
+                        <span>${this._escapeHTML(categoriaNombre)}</span>
+                        ${subcategoriaNombre ? `<span class="tarea-subcategoria"> / ${this._escapeHTML(subcategoriaNombre)}</span>` : ''}
+                    </div>
+                    <div class="tarea-fechas">
+                        <span class="tarea-fecha-inicio">
+                            <i class="fas fa-calendar-plus"></i> ${fechaStr}
+                        </span>
+                        ${fechaLimiteStr ? `
+                            <span class="tarea-fecha-limite">
+                                <i class="fas fa-calendar-check"></i> Límite: ${fechaLimiteStr}
+                            </span>
+                        ` : ''}
+                    </div>
+                </div>
+                
                 ${tarea.descripcion ? `
-                    <p class="tarea-contenido">${this._escapeHTML(tarea.descripcion)}</p>
+                    <div class="tarea-contenido">
+                        ${this._escapeHTML(tarea.descripcion)}
+                    </div>
                 ` : ''}
                 
                 ${itemsPreview}
@@ -460,98 +536,342 @@ class TareasController {
                     <span class="tarea-creador">
                         <i class="fas fa-user"></i>
                         ${this._escapeHTML(tarea.creadoPorNombre || 'Usuario')}
-                        ${esCreador ? '<span style="color: #ffc107; margin-left: 4px;">(tú)</span>' : ''}
-                    </span>
-                    <span class="tarea-fecha">
-                        <i class="fas fa-calendar"></i>
-                        ${fechaStr}
+                        ${esCreador ? '<span class="creador-badge">(tú)</span>' : ''}
                     </span>
                 </div>
                 
-                <div class="tarea-acciones">
-                    <button class="btn-card-action edit" data-id="${tarea.id}">
-                        <i class="fas fa-edit"></i> Editar
-                    </button>
-                    <button class="btn-card-action delete" data-id="${tarea.id}">
-                        <i class="fas fa-trash-alt"></i> Eliminar
-                    </button>
-                </div>
+                ${puedeEditar ? `
+                    <div class="tarea-acciones">
+                        <button class="btn-card-action edit" data-id="${tarea.id}">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn-card-action delete" data-id="${tarea.id}">
+                            <i class="fas fa-trash-alt"></i> Eliminar
+                        </button>
+                    </div>
+                ` : ''}
             </div>
         `;
     }
-
+    
     async _marcarItem(tareaId, itemId, completado) {
         try {
-            // Obtener la tarea y el item para registrar detalles
-            const tarea = this.todasLasTareas.find(t => t.id === tareaId);
-            const item = tarea?.items?.[itemId];
-            const itemTexto = item?.texto || 'Item sin texto';
-
-            await this.tareaManager.marcarItemTarea(
-                tareaId, itemId, completado,
+            const marcadoPor = completado ? this.usuarioActual.id : null;
+            const marcadoPorNombre = completado ? this.usuarioActual.nombreCompleto : null;
+            
+            await this.tareaManager.marcarItemTareaConAutor(
+                tareaId, itemId, completado, marcadoPor, marcadoPorNombre,
                 this.usuarioActual, this.usuarioActual.organizacionCamelCase
             );
-
-            // ✅ NUEVO: Registrar marcado de item en bitácora
-            if (tarea) {
-                await this._registrarMarcadoItem(tarea, itemId, itemTexto, completado);
-            }
-
-            if (tarea && tarea.items && tarea.items[itemId]) {
-                tarea.items[itemId].completado = completado;
-            }
-
+            
         } catch (error) {
-            const checkbox = document.querySelector(`.tarea-item-checkbox[data-tarea-id="${tareaId}"][data-item-id="${itemId}"]`);
-            if (checkbox) checkbox.checked = !completado;
-
+      
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'No se pudo actualizar el item',
+                text: error.message || 'No se pudo actualizar el item',
                 timer: 2000,
                 showConfirmButton: false,
                 background: 'var(--color-bg-secondary)'
             });
         }
     }
-
-    // ========== FUNCIONES PARA EL FORMULARIO INLINE ==========
-
-    _mostrarFormularioCreacion() {
+    
+    // =============================================
+    // MODAL
+    // =============================================
+    
+    _crearModalTarea() {
+        if (document.getElementById('modalTareaDetalle')) return;
+        
+        const modalHTML = `
+            <div id="modalTareaDetalle" class="tarea-modal">
+                <div class="tarea-modal-content">
+                    <div class="tarea-modal-header">
+                        <h3 id="modalTareaTitulo">Detalle de Nota</h3>
+                        <button class="tarea-modal-close" id="cerrarModalTarea">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="tarea-modal-body" id="modalTareaBody"></div>
+                    <div class="tarea-modal-footer" id="modalTareaFooter"></div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        const modal = document.getElementById('modalTareaDetalle');
+        const closeBtn = document.getElementById('cerrarModalTarea');
+        
+        closeBtn.addEventListener('click', () => {
+            modal.classList.remove('show');
+            this.modalVisible = false;
+        });
+        
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('show');
+                this.modalVisible = false;
+            }
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.modalVisible) {
+                modal.classList.remove('show');
+                this.modalVisible = false;
+            }
+        });
+    }
+    
+    _abrirModalTarea(tarea) {
+        this.tareaModalActual = tarea;
+        const modal = document.getElementById('modalTareaDetalle');
+        const modalTitulo = document.getElementById('modalTareaTitulo');
+        const modalBody = document.getElementById('modalTareaBody');
+        const modalFooter = document.getElementById('modalTareaFooter');
+        
+        const esCreador = tarea.creadoPor === this.usuarioActual?.id;
+        const puedeEditar = esCreador;
+        
+        const tipoClass = {
+            'global': 'tipo-general',
+            'general': 'tipo-general',
+            'personal': 'tipo-personal',
+            'compartida': 'tipo-compartida',
+            'area': 'tipo-area'
+        }[tarea.tipo] || 'tipo-general';
+        
+        const tipoTexto = {
+            'global': 'General',
+            'general': 'General',
+            'personal': 'Personal',
+            'compartida': 'Compartida',
+            'area': 'Área'
+        }[tarea.tipo] || 'General';
+        
+        const fecha = tarea.fechaCreacion ? new Date(tarea.fechaCreacion) : new Date();
+        const fechaStr = fecha.toLocaleDateString('es-MX', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+        
+        const fechaLimite = tarea.fechaLimite ? new Date(tarea.fechaLimite) : null;
+        const fechaLimiteStr = fechaLimite ? fechaLimite.toLocaleDateString('es-MX', {
+            day: '2-digit', month: '2-digit', year: 'numeric'
+        }) : null;
+        
+        let categoriaNombre = 'Sin categoría';
+        let subcategoriaNombre = '';
+        
+        if (tarea.categoriaId && this.categoriasDisponibles) {
+            const categoria = this.categoriasDisponibles.find(c => c.id === tarea.categoriaId);
+            if (categoria) {
+                categoriaNombre = categoria.nombre;
+                if (tarea.subcategoriaId && categoria.subcategorias && categoria.subcategorias[tarea.subcategoriaId]) {
+                    subcategoriaNombre = categoria.subcategorias[tarea.subcategoriaId].nombre || '';
+                }
+            }
+        }
+        
+        const items = tarea.items ? Object.values(tarea.items) : [];
+        const totalItems = items.length;
+        const completados = items.filter(i => i.completado).length;
+        
+        let itemsHtml = '';
+        if (items.length > 0) {
+            itemsHtml = '<div class="modal-items-list">';
+            items.forEach(item => {
+                const marcadoPor = item.marcadoPor || null;
+                const marcadoPorNombre = marcadoPor === this.usuarioActual.id ? 'tú' : (this.cacheUsuarios[marcadoPor] || 'otro usuario');
+                const puedeDesmarcar = marcadoPor === this.usuarioActual.id;
+                
+                itemsHtml += `
+                    <div class="modal-item-row ${item.completado ? 'completado' : ''}" data-item-id="${item.id}">
+                        <div class="modal-item-checkbox-wrapper">
+                            <input type="checkbox" class="modal-item-checkbox" 
+                                   data-item-id="${item.id}"
+                                   ${item.completado ? 'checked' : ''}
+                                   ${item.completado && !puedeDesmarcar ? 'disabled' : ''}>
+                        </div>
+                        <div class="modal-item-texto">${this._escapeHTML(item.texto)}</div>
+                        ${item.completado && marcadoPor ? `
+                            <div class="modal-item-marcado-por">
+                                <i class="fas fa-user-check"></i>
+                                <span>Marcado por: ${this._escapeHTML(marcadoPorNombre)}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            itemsHtml += `
+                <div class="modal-progreso">
+                    <span class="progreso-texto">${completados}/${totalItems} completados</span>
+                    <div class="progreso-bar">
+                        <div class="progreso-fill" style="width: ${totalItems > 0 ? (completados / totalItems) * 100 : 0}%"></div>
+                    </div>
+                </div>
+            </div>`;
+        } else {
+            itemsHtml = '<p class="no-items">No hay items en el checklist</p>';
+        }
+        
+        modalTitulo.innerHTML = `
+            <span class="tarea-tipo-badge ${tipoClass}" style="font-size: 12px; margin-right: 12px;">${tipoTexto}</span>
+            ${this._escapeHTML(tarea.nombreActividad || 'Sin título')}
+        `;
+        
+        modalBody.innerHTML = `
+            <div class="modal-metadatos">
+                <div class="modal-categoria">
+                    <i class="fas fa-tag"></i>
+                    <span>Categoría: ${this._escapeHTML(categoriaNombre)}</span>
+                    ${subcategoriaNombre ? `<span class="tarea-subcategoria"> / ${this._escapeHTML(subcategoriaNombre)}</span>` : ''}
+                </div>
+                <div class="modal-fechas">
+                    <div class="modal-fecha-inicio">
+                        <i class="fas fa-calendar-plus"></i>
+                        <span>Creada: ${fechaStr}</span>
+                    </div>
+                    ${fechaLimiteStr ? `
+                        <div class="modal-fecha-limite">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>Límite: ${fechaLimiteStr}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="modal-creador">
+                    <i class="fas fa-user"></i>
+                    <span>Creador: ${this._escapeHTML(tarea.creadoPorNombre || 'Usuario')}</span>
+                    ${esCreador ? '<span class="creador-badge">(tú)</span>' : ''}
+                </div>
+            </div>
+            
+            ${tarea.descripcion ? `
+                <div class="modal-descripcion">
+                    <h4><i class="fas fa-align-left"></i> Descripción</h4>
+                    <p>${this._escapeHTML(tarea.descripcion)}</p>
+                </div>
+            ` : ''}
+            
+            <div class="modal-checklist">
+                <h4><i class="fas fa-check-square"></i> Checklist</h4>
+                ${itemsHtml}
+            </div>
+        `;
+        
+        modalFooter.innerHTML = '';
+        if (puedeEditar) {
+            modalFooter.innerHTML = `
+                <button class="btn-modal-editar" id="btnModalEditar">
+                    <i class="fas fa-edit"></i> Editar Nota
+                </button>
+                <button class="btn-modal-eliminar" id="btnModalEliminar">
+                    <i class="fas fa-trash-alt"></i> Eliminar Nota
+                </button>
+            `;
+            
+            document.getElementById('btnModalEditar')?.addEventListener('click', async () => {
+                modal.classList.remove('show');
+                this.modalVisible = false;
+                await this._abrirFormularioEdicion(tarea.id);
+            });
+            
+            document.getElementById('btnModalEliminar')?.addEventListener('click', async () => {
+                modal.classList.remove('show');
+                this.modalVisible = false;
+                await this._eliminarTarea(tarea.id);
+            });
+        }
+        
+        modalBody.querySelectorAll('.modal-item-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', async (e) => {
+                e.stopPropagation();
+                const itemId = checkbox.dataset.itemId;
+                const completado = checkbox.checked;
+                checkbox.disabled = true;
+                await this._marcarItem(tarea.id, itemId, completado);
+            });
+        });
+        
+        modal.classList.add('show');
+        this.modalVisible = true;
+    }
+    
+    // =============================================
+    // FORMULARIO
+    // =============================================
+    
+    async _mostrarFormularioCreacion() {
+        await this._asegurarDatosCargados();
+        
         this.modoEdicion = false;
         this.tareaActual = null;
         this.tipoSeleccionado = 'personal';
         this.areaSeleccionada = null;
+        this.categoriaSeleccionada = null;
         this.itemsActuales = [];
-
-        document.getElementById('notaId').value = '';
-        document.getElementById('notaTitulo').value = '';
-        document.getElementById('notaDescripcion').value = '';
-        document.getElementById('tieneRecordatorio').checked = false;
-        document.getElementById('fechaLimite').value = this._getFechaPorDefecto('personal');
-        document.getElementById('fechaContainer').style.display = 'none';
-
+        
+        this._limpiarCamposFormulario();
         this._renderizarItemsInline([]);
         this._seleccionarTipoFormulario('personal');
-
-        document.getElementById('formularioCreacion').style.display = 'block';
-
-        // Desplazar al formulario
+        
+        const formulario = document.getElementById('formularioCreacion');
+        if (formulario) formulario.style.display = 'block';
+        
         setTimeout(() => {
-            const formulario = document.getElementById('formularioCreacion');
-            formulario.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            document.getElementById('notaTitulo').focus();
+            if (formulario) formulario.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const tituloInput = document.getElementById('notaTitulo');
+            if (tituloInput) tituloInput.focus();
         }, 100);
     }
-
-    _ocultarFormulario() {
-        document.getElementById('formularioCreacion').style.display = 'none';
+    
+    async _asegurarDatosCargados() {
+        if (this.usuariosDisponibles.length > 0 && this.areasDisponibles.length > 0) {
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Cargando datos...',
+            html: '<i class="fas fa-spinner fa-spin"></i>',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            background: 'var(--color-bg-secondary)'
+        });
+        
+        try {
+            await this._cargarDatosAuxiliares();
+            Swal.close();
+        } catch (error) {
+            Swal.close();
+            this._mostrarError('Error cargando datos necesarios');
+        }
     }
-
+    
+    _limpiarCamposFormulario() {
+        const notaId = document.getElementById('notaId');
+        const notaTitulo = document.getElementById('notaTitulo');
+        const notaDescripcion = document.getElementById('notaDescripcion');
+        const tieneRecordatorio = document.getElementById('tieneRecordatorio');
+        const fechaLimite = document.getElementById('fechaLimite');
+        const fechaContainer = document.getElementById('fechaContainer');
+        
+        if (notaId) notaId.value = '';
+        if (notaTitulo) notaTitulo.value = '';
+        if (notaDescripcion) notaDescripcion.value = '';
+        if (tieneRecordatorio) tieneRecordatorio.checked = false;
+        if (fechaLimite) fechaLimite.value = this._getFechaPorDefecto('personal');
+        if (fechaContainer) fechaContainer.style.display = 'none';
+    }
+    
+    _ocultarFormulario() {
+        const formulario = document.getElementById('formularioCreacion');
+        if (formulario) formulario.style.display = 'none';
+    }
+    
     _seleccionarTipoFormulario(tipo) {
         this.tipoSeleccionado = tipo;
-
+        
         document.querySelectorAll('.tipo-option').forEach(opt => {
             if (opt.dataset.tipo === tipo) {
                 opt.classList.add('seleccionado');
@@ -559,25 +879,27 @@ class TareasController {
                 opt.classList.remove('seleccionado');
             }
         });
-
+        
         const titulos = {
             'general': 'Nueva Nota General',
             'personal': 'Nueva Nota Personal',
             'compartida': 'Nueva Nota Compartida',
             'area': 'Nueva Nota por Área'
         };
-        document.getElementById('formularioTitulo').textContent = titulos[tipo] || 'Nueva Nota';
-
-        this._renderizarCamposEspecificosInline(tipo);
+        const formularioTitulo = document.getElementById('formularioTitulo');
+        if (formularioTitulo) formularioTitulo.textContent = titulos[tipo] || 'Nueva Nota';
+        
+        this._renderizarCamposEspecificos(tipo);
         this._actualizarFechaPorDefecto();
     }
-
+    
     _actualizarFechaPorDefecto() {
         const fechaInput = document.getElementById('fechaLimite');
-        if (!fechaInput) return;
-        fechaInput.value = this._getFechaPorDefecto(this.tipoSeleccionado);
+        if (fechaInput) {
+            fechaInput.value = this._getFechaPorDefecto(this.tipoSeleccionado);
+        }
     }
-
+    
     _getFechaPorDefecto(tipo) {
         const fecha = new Date();
         switch (tipo) {
@@ -587,14 +909,14 @@ class TareasController {
         }
         return fecha.toISOString().split('T')[0];
     }
-
+    
     _agregarItemFormulario() {
         const itemsList = document.getElementById('itemsList');
         if (!itemsList) return;
-
+        
         const noItems = itemsList.querySelector('.no-items');
         if (noItems) noItems.remove();
-
+        
         const newItemId = `item_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
         const html = `
             <div class="item-row" data-item-id="${newItemId}">
@@ -605,30 +927,32 @@ class TareasController {
                 </button>
             </div>
         `;
-
+        
         itemsList.insertAdjacentHTML('beforeend', html);
-
+        
         const newRow = itemsList.lastElementChild;
         const input = newRow.querySelector('.item-texto');
         const deleteBtn = newRow.querySelector('.btn-eliminar-item');
-
-        input.focus();
-
-        deleteBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            newRow.remove();
-        });
+        
+        if (input) input.focus();
+        
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                newRow.remove();
+            });
+        }
     }
-
+    
     _renderizarItemsInline(items) {
         const container = document.getElementById('itemsList');
         if (!container) return;
-
+        
         if (!items || items.length === 0) {
             container.innerHTML = '<p class="no-items">No hay items. Agrega uno nuevo.</p>';
             return;
         }
-
+        
         let html = '';
         items.forEach(item => {
             html += `
@@ -641,25 +965,25 @@ class TareasController {
                 </div>
             `;
         });
-
+        
         container.innerHTML = html;
-
+        
         container.querySelectorAll('.item-checkbox').forEach(cb => {
             cb.addEventListener('change', (e) => {
                 const row = e.target.closest('.item-row');
                 if (row) {
                     const texto = row.querySelector('.item-texto');
                     if (e.target.checked) {
-                        texto.style.textDecoration = 'line-through';
-                        texto.style.color = 'var(--color-text-dim)';
+                        if (texto) texto.style.textDecoration = 'line-through';
+                        if (texto) texto.style.color = 'var(--color-text-dim)';
                     } else {
-                        texto.style.textDecoration = 'none';
-                        texto.style.color = 'var(--color-text-primary)';
+                        if (texto) texto.style.textDecoration = 'none';
+                        if (texto) texto.style.color = 'var(--color-text-primary)';
                     }
                 }
             });
         });
-
+        
         container.querySelectorAll('.btn-eliminar-item').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -668,44 +992,122 @@ class TareasController {
             });
         });
     }
-
-    _renderizarCamposEspecificosInline(tipo) {
+    
+    _renderizarCamposEspecificos(tipo) {
         const container = document.getElementById('camposEspecificos');
         if (!container) return;
-
+        
         let html = '';
-
+        html += this._getHTMLCategorias();
+        
         switch (tipo) {
             case 'personal':
-                html = '';
                 break;
             case 'compartida':
-                html = this._getHTMLUsuariosCreacion();
+                html += this._getHTMLUsuarios();
                 break;
             case 'area':
-                html = this._getHTMLAreasCreacion();
+                html += this._getHTMLAreas();
                 break;
             case 'general':
-                html = this._getHTMLGeneral();
+                html += this._getHTMLGeneral();
                 break;
         }
-
+        
         container.innerHTML = html;
-
-        if (tipo === 'compartida' && html) {
-            this._configurarSelectorUsuariosCreacion();
-        } else if (tipo === 'area' && html) {
-            this._configurarSelectorAreasCreacion();
+        
+        if (tipo === 'compartida') {
+            this._configurarSelectorUsuarios();
+        } else if (tipo === 'area') {
+            this._configurarSelectorAreas();
         }
+        
+        this._configurarSelectorCategorias();
     }
-
-    // ========== HTML PARA CAMPOS ESPECÍFICOS ==========
-
-    _getHTMLUsuariosCreacion() {
+    
+    _getHTMLCategorias() {
+        if (this.categoriasDisponibles.length === 0) {
+            return `
+                <div class="form-field">
+                    <label class="form-label">Categoría</label>
+                    <select class="form-control" id="categoriaNota">
+                        <option value="">Sin categoría</option>
+                    </select>
+                    <small class="form-text text-muted">No hay categorías disponibles</small>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Subcategoría</label>
+                    <select class="form-control" id="subcategoriaNota" disabled>
+                        <option value="">-- Selecciona subcategoría --</option>
+                    </select>
+                </div>
+            `;
+        }
+        
+        let options = '<option value="">Sin categoría</option>';
+        this.categoriasDisponibles.forEach(cat => {
+            options += `<option value="${cat.id}">${this._escapeHTML(cat.nombre)}</option>`;
+        });
+        
+        return `
+            <div class="form-field">
+                <label class="form-label">Categoría</label>
+                <select class="form-control" id="categoriaNota">
+                    ${options}
+                </select>
+            </div>
+            <div class="form-field">
+                <label class="form-label">Subcategoría</label>
+                <select class="form-control" id="subcategoriaNota" disabled>
+                    <option value="">-- Selecciona subcategoría --</option>
+                </select>
+            </div>
+        `;
+    }
+    
+    _configurarSelectorCategorias() {
+        const categoriaSelect = document.getElementById('categoriaNota');
+        const subcategoriaSelect = document.getElementById('subcategoriaNota');
+        
+        if (!categoriaSelect) return;
+        
+        categoriaSelect.addEventListener('change', async (e) => {
+            const categoriaId = e.target.value;
+            
+            if (!categoriaId) {
+                if (subcategoriaSelect) {
+                    subcategoriaSelect.innerHTML = '<option value="">-- Selecciona subcategoría --</option>';
+                    subcategoriaSelect.disabled = true;
+                }
+                return;
+            }
+            
+            const categoria = this.categoriasDisponibles.find(c => c.id === categoriaId);
+            if (!categoria || !categoria.subcategorias || Object.keys(categoria.subcategorias).length === 0) {
+                if (subcategoriaSelect) {
+                    subcategoriaSelect.innerHTML = '<option value="">-- No hay subcategorías --</option>';
+                    subcategoriaSelect.disabled = true;
+                }
+                return;
+            }
+            
+            let options = '<option value="">-- Selecciona subcategoría --</option>';
+            Object.values(categoria.subcategorias).forEach(sub => {
+                options += `<option value="${sub.id}">${this._escapeHTML(sub.nombre)}</option>`;
+            });
+            
+            if (subcategoriaSelect) {
+                subcategoriaSelect.innerHTML = options;
+                subcategoriaSelect.disabled = false;
+            }
+        });
+    }
+    
+    _getHTMLUsuarios() {
         if (this.usuariosDisponibles.length === 0) {
             return '<p class="no-items">No hay usuarios disponibles</p>';
         }
-
+        
         let html = `
             <div class="campos-especificos">
                 <h6 class="section-title"><i class="fas fa-users"></i> Compartir con usuarios</h6>
@@ -721,7 +1123,7 @@ class TareasController {
                 
                 <div class="usuarios-container" id="usuariosContainer">
         `;
-
+        
         this.usuariosDisponibles.forEach(usuario => {
             const iniciales = this._obtenerIniciales(usuario.nombreCompleto);
             html += `
@@ -735,7 +1137,7 @@ class TareasController {
                 </div>
             `;
         });
-
+        
         html += `
                 </div>
                 <div class="selected-summary" id="selectedUsersSummary">
@@ -744,17 +1146,549 @@ class TareasController {
                 </div>
             </div>
         `;
-
+        
         return html;
     }
-
+    
+    _configurarSelectorUsuarios() {
+        const container = document.getElementById('usuariosContainer');
+        if (!container) return;
+        
+        container.querySelectorAll('.usuario-item').forEach(item => {
+            const checkbox = item.querySelector('.usuario-checkbox');
+            
+            item.addEventListener('click', (e) => {
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    this._actualizarEstiloItem(item, checkbox.checked);
+                }
+                this._actualizarContadorUsuarios();
+            });
+            
+            checkbox.addEventListener('change', (e) => {
+                this._actualizarEstiloItem(item, e.target.checked);
+                this._actualizarContadorUsuarios();
+            });
+        });
+        
+        const seleccionarTodos = document.getElementById('seleccionarTodosUsuarios');
+        const deseleccionarTodos = document.getElementById('deseleccionarTodosUsuarios');
+        
+        if (seleccionarTodos) {
+            seleccionarTodos.addEventListener('click', () => {
+                container.querySelectorAll('.usuario-checkbox').forEach(cb => {
+                    cb.checked = true;
+                    this._actualizarEstiloItem(cb.closest('.usuario-item'), true);
+                });
+                this._actualizarContadorUsuarios();
+            });
+        }
+        
+        if (deseleccionarTodos) {
+            deseleccionarTodos.addEventListener('click', () => {
+                container.querySelectorAll('.usuario-checkbox').forEach(cb => {
+                    cb.checked = false;
+                    this._actualizarEstiloItem(cb.closest('.usuario-item'), false);
+                });
+                this._actualizarContadorUsuarios();
+            });
+        }
+        
+        this._actualizarContadorUsuarios();
+    }
+    
+    _getHTMLAreas() {
+        if (this.areasDisponibles.length === 0) {
+            return '<p class="no-items">No hay áreas disponibles</p>';
+        }
+        
+        let html = `
+            <div class="campos-especificos">
+                <h6 class="section-title"><i class="fas fa-building"></i> Asignar a Área</h6>
+                
+                <div class="areas-container" id="areasContainer">
+        `;
+        
+        this.areasDisponibles.forEach(area => {
+            const iniciales = this._obtenerIniciales(area.nombreArea);
+            const totalCargos = area.cargos ? Object.keys(area.cargos).length : 0;
+            
+            html += `
+                <div class="area-item" data-area-id="${area.id}">
+                    <input type="radio" class="area-radio" name="areaSeleccionada" value="${area.id}">
+                    <div class="area-icon">${iniciales}</div>
+                    <div class="area-info">
+                        <span class="area-nombre">${this._escapeHTML(area.nombreArea)}</span>
+                        <span class="area-descripcion">${this._escapeHTML(area.descripcion || 'Sin descripción')}</span>
+                        <span class="area-badge">${totalCargos} cargos</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `</div>`;
+        
+        html += `
+            <div id="cargosSection" style="margin-top: 20px; display: none;">
+                <h6 class="section-title"><i class="fas fa-user-tag"></i> Cargos específicos (opcional)</h6>
+                <div class="cargos-container" id="cargosContainer">
+                    <div class="loading-cargos"><i class="fas fa-spinner fa-spin"></i> Cargando cargos...</div>
+                </div>
+                <div class="selected-summary" id="selectedCargosSummary" style="display: none;">
+                    <i class="fas fa-users"></i>
+                    <span id="selectedCargosCount">0</span> cargos seleccionados
+                </div>
+            </div>
+        `;
+        
+        html += `</div>`;
+        
+        return html;
+    }
+    
+    _configurarSelectorAreas() {
+        const areasContainer = document.getElementById('areasContainer');
+        if (!areasContainer) return;
+        
+        areasContainer.querySelectorAll('.area-item').forEach(item => {
+            const radio = item.querySelector('.area-radio');
+            
+            item.addEventListener('click', (e) => {
+                if (e.target !== radio) {
+                    radio.checked = true;
+                    this._seleccionarArea(item.dataset.areaId);
+                }
+            });
+            
+            radio.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this._seleccionarArea(item.dataset.areaId);
+                }
+            });
+        });
+    }
+    
+    async _seleccionarArea(areaId) {
+        document.querySelectorAll('.area-item').forEach(item => {
+            if (item.dataset.areaId === areaId) {
+                item.classList.add('seleccionado');
+            } else {
+                item.classList.remove('seleccionado');
+            }
+        });
+        
+        this.areaSeleccionada = this.areasDisponibles.find(a => a.id === areaId);
+        const cargosSection = document.getElementById('cargosSection');
+        if (cargosSection) cargosSection.style.display = 'block';
+        await this._cargarCargosArea(areaId);
+    }
+    
+    async _cargarCargosArea(areaId) {
+        const area = this.areasDisponibles.find(a => a.id === areaId);
+        if (!area) return;
+        
+        const cargosContainer = document.getElementById('cargosContainer');
+        if (!cargosContainer) return;
+        
+        let cargos = [];
+        if (area.cargos) {
+            cargos = Object.entries(area.cargos)
+                .filter(([_, cargo]) => cargo.estado !== 'inactivo')
+                .map(([id, cargo]) => ({ id, ...cargo }));
+        }
+        
+        if (cargos.length === 0) {
+            cargosContainer.innerHTML = '<p class="no-items">No hay cargos disponibles en esta área</p>';
+            return;
+        }
+        
+        let html = '';
+        cargos.forEach(cargo => {
+            html += `
+                <div class="cargo-item" data-cargo-id="${cargo.id}">
+                    <input type="checkbox" class="cargo-checkbox" value="${cargo.id}">
+                    <div class="cargo-icon"><i class="fas fa-user-tie"></i></div>
+                    <div class="cargo-info">
+                        <span class="cargo-nombre">${this._escapeHTML(cargo.nombre)}</span>
+                        <span class="cargo-descripcion">${this._escapeHTML(cargo.descripcion || '')}</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        cargosContainer.innerHTML = html;
+        
+        cargosContainer.querySelectorAll('.cargo-item').forEach(item => {
+            const checkbox = item.querySelector('.cargo-checkbox');
+            
+            item.addEventListener('click', (e) => {
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    this._actualizarEstiloItem(item, checkbox.checked);
+                }
+                this._actualizarContadorCargos();
+            });
+            
+            checkbox.addEventListener('change', (e) => {
+                this._actualizarEstiloItem(item, e.target.checked);
+                this._actualizarContadorCargos();
+            });
+        });
+        
+        this._actualizarContadorCargos();
+    }
+    
+    _getHTMLGeneral() {
+        return `
+            <div class="campos-especificos">
+                <div class="visibility-info" style="padding: 15px; text-align: center;">
+                    <i class="fas fa-eye" style="font-size: 24px; margin-right: 10px;"></i>
+                    <span>Esta nota será visible para <strong>todos los usuarios</strong> de la organización</span>
+                </div>
+            </div>
+        `;
+    }
+    
+    _actualizarEstiloItem(item, seleccionado) {
+        if (seleccionado) {
+            item.classList.add('seleccionado');
+        } else {
+            item.classList.remove('seleccionado');
+        }
+    }
+    
+    _actualizarContadorUsuarios() {
+        const count = document.querySelectorAll('.usuario-checkbox:checked').length;
+        const span = document.getElementById('selectedUsersCount');
+        if (span) span.textContent = count;
+    }
+    
+    _actualizarContadorCargos() {
+        const count = document.querySelectorAll('.cargo-checkbox:checked').length;
+        const summary = document.getElementById('selectedCargosSummary');
+        const span = document.getElementById('selectedCargosCount');
+        
+        if (summary && span) {
+            if (count > 0) {
+                span.textContent = count;
+                summary.style.display = 'flex';
+            } else {
+                summary.style.display = 'none';
+            }
+        }
+    }
+    
+    async _guardarNota() {
+        const titulo = document.getElementById('notaTitulo');
+        if (!titulo || !titulo.value.trim()) {
+            this._mostrarError('El título es requerido');
+            return;
+        }
+        
+        const tipo = this.tipoSeleccionado;
+        const notaId = document.getElementById('notaId')?.value || '';
+        const descripcion = document.getElementById('notaDescripcion')?.value.trim() || '';
+        const tieneRecordatorio = document.getElementById('tieneRecordatorio')?.checked || false;
+        const fechaLimiteInput = document.getElementById('fechaLimite')?.value || '';
+        const categoriaSelect = document.getElementById('categoriaNota');
+        const subcategoriaSelect = document.getElementById('subcategoriaNota');
+        const categoriaId = categoriaSelect ? categoriaSelect.value : '';
+        const subcategoriaId = subcategoriaSelect ? subcategoriaSelect.value : '';
+        
+        const items = {};
+        document.querySelectorAll('#itemsList .item-row').forEach((row, index) => {
+            const checkbox = row.querySelector('.item-checkbox');
+            const input = row.querySelector('.item-texto');
+            const texto = input ? input.value.trim() : '';
+            
+            if (texto) {
+                const itemId = row.dataset.itemId || `item_${Date.now()}_${index}`;
+                items[itemId] = {
+                    id: itemId,
+                    texto: texto,
+                    completado: checkbox ? checkbox.checked : false,
+                    fechaCreacion: new Date().toISOString(),
+                    marcadoPor: null,
+                    marcadoPorNombre: null
+                };
+            }
+        });
+        
+        let usuariosCompartidosIds = [];
+        let areaId = null;
+        let cargosIds = [];
+        
+        if (tipo === 'compartida') {
+            usuariosCompartidosIds = Array.from(document.querySelectorAll('.usuario-checkbox:checked')).map(cb => cb.value);
+            if (!usuariosCompartidosIds.includes(this.usuarioActual.id)) {
+                usuariosCompartidosIds.push(this.usuarioActual.id);
+            }
+        } else if (tipo === 'area') {
+            const areaRadio = document.querySelector('.area-radio:checked');
+            if (areaRadio) {
+                areaId = areaRadio.value;
+                cargosIds = Array.from(document.querySelectorAll('.cargo-checkbox:checked')).map(cb => cb.value);
+            } else {
+                this._mostrarError('Debes seleccionar un área');
+                return;
+            }
+        }
+        
+        let fechaLimite = null;
+        if (tieneRecordatorio && fechaLimiteInput) {
+            fechaLimite = new Date(fechaLimiteInput);
+            fechaLimite.setHours(23, 59, 59, 999);
+        }
+        
+        const tipoFirestore = tipo === 'general' ? 'global' : tipo;
+        
+        const tareaData = {
+            nombreActividad: titulo.value.trim(),
+            descripcion: descripcion,
+            items: items,
+            tipo: tipoFirestore,
+            fechaLimite: fechaLimite,
+            tieneRecordatorio: tieneRecordatorio,
+            categoriaId: categoriaId || null,
+            subcategoriaId: subcategoriaId || null
+        };
+        
+        if (tipo === 'compartida') {
+            tareaData.usuariosCompartidosIds = usuariosCompartidosIds;
+        } else if (tipo === 'area') {
+            tareaData.areaId = areaId;
+            tareaData.cargosIds = cargosIds;
+        }
+        
+        Swal.fire({
+            title: 'Guardando...',
+            html: '<i class="fas fa-spinner fa-spin"></i>',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            background: 'var(--color-bg-secondary)'
+        });
+        
+        try {
+            if (notaId) {
+                await this.tareaManager.actualizarTarea(
+                    notaId, tareaData,
+                    this.usuarioActual, this.usuarioActual.organizacionCamelCase
+                );
+            } else {
+                await this.tareaManager.crearTarea(tareaData, this.usuarioActual);
+            }
+            
+            Swal.close();
+            
+            await Swal.fire({
+                icon: 'success',
+                title: 'Éxito',
+                text: `Nota ${notaId ? 'actualizada' : 'creada'} correctamente`,
+                timer: 1500,
+                showConfirmButton: false,
+                background: 'var(--color-bg-secondary)'
+            });
+            
+            this._ocultarFormulario();
+            
+        } catch (error) {
+            Swal.close();
+            this._mostrarError(error.message);
+        }
+    }
+    
+    async _eliminarTarea(tareaId) {
+        const result = await Swal.fire({
+            title: '¿Eliminar nota?',
+            text: 'Esta acción no se puede deshacer',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            background: 'var(--color-bg-secondary)',
+            confirmButtonColor: '#dc3545'
+        });
+        
+        if (!result.isConfirmed) return;
+        
+        Swal.fire({
+            title: 'Eliminando...',
+            html: '<i class="fas fa-spinner fa-spin"></i>',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            background: 'var(--color-bg-secondary)'
+        });
+        
+        try {
+            await this.tareaManager.eliminarTarea(
+                tareaId, this.usuarioActual, this.usuarioActual.organizacionCamelCase
+            );
+            
+            Swal.close();
+            
+            await Swal.fire({
+                icon: 'success',
+                title: 'Eliminada',
+                text: 'La nota se eliminó correctamente',
+                timer: 1500,
+                showConfirmButton: false,
+                background: 'var(--color-bg-secondary)'
+            });
+            
+        } catch (error) {
+            Swal.close();
+            this._mostrarError(error.message);
+        }
+    }
+    
+    async _abrirFormularioEdicion(tareaId) {
+        await this._asegurarDatosCargados();
+        
+        Swal.fire({
+            title: 'Cargando...',
+            html: '<i class="fas fa-spinner fa-spin"></i>',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            background: 'var(--color-bg-secondary)'
+        });
+        
+        try {
+            this.tareaActual = await this.tareaManager.getTareaById(
+                tareaId, this.usuarioActual.organizacionCamelCase
+            );
+            
+            if (!this.tareaActual) throw new Error('Nota no encontrada');
+            
+            if (this.tareaActual.creadoPor !== this.usuarioActual.id) {
+                Swal.close();
+                this._mostrarError('No tienes permiso para editar esta nota');
+                return;
+            }
+            
+            this.modoEdicion = true;
+            this.tipoSeleccionado = this.tareaActual.tipo === 'global' ? 'general' : this.tareaActual.tipo;
+            this.areaSeleccionada = null;
+            
+            const notaIdInput = document.getElementById('notaId');
+            const notaTitulo = document.getElementById('notaTitulo');
+            const notaDescripcion = document.getElementById('notaDescripcion');
+            const tieneRecordatorio = document.getElementById('tieneRecordatorio');
+            const fechaLimite = document.getElementById('fechaLimite');
+            const fechaContainer = document.getElementById('fechaContainer');
+            
+            if (notaIdInput) notaIdInput.value = this.tareaActual.id;
+            if (notaTitulo) notaTitulo.value = this.tareaActual.nombreActividad || '';
+            if (notaDescripcion) notaDescripcion.value = this.tareaActual.descripcion || '';
+            
+            const items = this.tareaActual.items ? Object.values(this.tareaActual.items) : [];
+            this._renderizarItemsInline(items);
+            
+            const tieneRecordatorioVal = this.tareaActual.tieneRecordatorio || false;
+            if (tieneRecordatorio) tieneRecordatorio.checked = tieneRecordatorioVal;
+            if (fechaContainer) fechaContainer.style.display = tieneRecordatorioVal ? 'block' : 'none';
+            
+            if (this.tareaActual.fechaLimite) {
+                const fecha = new Date(this.tareaActual.fechaLimite);
+                if (fechaLimite) fechaLimite.value = fecha.toISOString().split('T')[0];
+            } else {
+                if (fechaLimite) fechaLimite.value = '';
+            }
+            
+            document.querySelectorAll('.tipo-option').forEach(opt => {
+                if (opt.dataset.tipo === this.tipoSeleccionado) {
+                    opt.classList.add('seleccionado');
+                } else {
+                    opt.classList.remove('seleccionado');
+                }
+            });
+            
+            await this._renderizarCamposEspecificosEdicion(this.tipoSeleccionado, this.tareaActual);
+            
+            if (this.tareaActual.categoriaId) {
+                const categoriaSelect = document.getElementById('categoriaNota');
+                if (categoriaSelect) {
+                    categoriaSelect.value = this.tareaActual.categoriaId;
+                    const event = new Event('change');
+                    categoriaSelect.dispatchEvent(event);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    
+                    if (this.tareaActual.subcategoriaId) {
+                        const subcategoriaSelect = document.getElementById('subcategoriaNota');
+                        if (subcategoriaSelect && !subcategoriaSelect.disabled) {
+                            subcategoriaSelect.value = this.tareaActual.subcategoriaId;
+                        }
+                    }
+                }
+            }
+            
+            const titulos = {
+                'general': 'Editar Nota General',
+                'personal': 'Editar Nota Personal',
+                'compartida': 'Editar Nota Compartida',
+                'area': 'Editar Nota por Área'
+            };
+            const formularioTitulo = document.getElementById('formularioTitulo');
+            if (formularioTitulo) formularioTitulo.textContent = titulos[this.tipoSeleccionado] || 'Editar Nota';
+            
+            Swal.close();
+            
+            const formulario = document.getElementById('formularioCreacion');
+            if (formulario) formulario.style.display = 'block';
+            
+            setTimeout(() => {
+                if (formulario) formulario.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (notaTitulo) {
+                    notaTitulo.focus();
+                    notaTitulo.select();
+                }
+            }, 100);
+            
+        } catch (error) {
+            Swal.close();
+            console.error(error);
+            this._mostrarError('Error al cargar la nota');
+        }
+    }
+    
+    async _renderizarCamposEspecificosEdicion(tipo, tareaData) {
+        const container = document.getElementById('camposEspecificos');
+        if (!container) return;
+        
+        let html = this._getHTMLCategorias();
+        
+        switch (tipo) {
+            case 'personal':
+                break;
+            case 'compartida':
+                html += this._getHTMLUsuariosEdicion(tareaData);
+                break;
+            case 'area':
+                html += this._getHTMLAreasEdicion(tareaData);
+                break;
+            case 'general':
+                html += this._getHTMLGeneral();
+                break;
+        }
+        
+        container.innerHTML = html;
+        
+        if (tipo === 'compartida') {
+            this._configurarSelectorUsuariosEdicion(tareaData);
+        } else if (tipo === 'area') {
+            await this._configurarSelectorAreasEdicion(tareaData);
+        }
+        
+        this._configurarSelectorCategorias();
+    }
+    
     _getHTMLUsuariosEdicion(tareaData) {
         if (this.usuariosDisponibles.length === 0) {
             return '<p class="no-items">No hay usuarios disponibles</p>';
         }
-
+        
         const seleccionados = tareaData?.usuariosCompartidosIds || [];
-
+        
         let html = `
             <div class="campos-especificos">
                 <h6 class="section-title"><i class="fas fa-users"></i> Compartir con usuarios</h6>
@@ -770,11 +1704,11 @@ class TareasController {
                 
                 <div class="usuarios-container" id="usuariosContainer">
         `;
-
+        
         this.usuariosDisponibles.forEach(usuario => {
             const iniciales = this._obtenerIniciales(usuario.nombreCompleto);
             const seleccionado = seleccionados.includes(usuario.id) ? 'checked' : '';
-
+            
             html += `
                 <div class="usuario-item" data-usuario-id="${usuario.id}">
                     <input type="checkbox" class="usuario-checkbox" value="${usuario.id}" ${seleccionado}>
@@ -786,7 +1720,7 @@ class TareasController {
                 </div>
             `;
         });
-
+        
         html += `
                 </div>
                 <div class="selected-summary" id="selectedUsersSummary">
@@ -795,79 +1729,81 @@ class TareasController {
                 </div>
             </div>
         `;
-
+        
         return html;
     }
-
-    _getHTMLAreasCreacion() {
-        if (this.areasDisponibles.length === 0) {
-            return '<p class="no-items">No hay áreas disponibles</p>';
-        }
-
-        let html = `
-            <div class="campos-especificos">
-                <h6 class="section-title"><i class="fas fa-building"></i> Asignar a Área</h6>
-                
-                <div class="areas-container" id="areasContainer">
-        `;
-
-        this.areasDisponibles.forEach(area => {
-            const iniciales = this._obtenerIniciales(area.nombreArea);
-            const totalCargos = area.cargos ? Object.keys(area.cargos).length : 0;
-
-            html += `
-                <div class="area-item" data-area-id="${area.id}">
-                    <input type="radio" class="area-radio" name="areaSeleccionada" value="${area.id}">
-                    <div class="area-icon">${iniciales}</div>
-                    <div class="area-info">
-                        <span class="area-nombre">${this._escapeHTML(area.nombreArea)}</span>
-                        <span class="area-descripcion">${this._escapeHTML(area.descripcion || 'Sin descripción')}</span>
-                        <span class="area-badge">${totalCargos} cargos</span>
-                    </div>
-                </div>
-            `;
+    
+    _configurarSelectorUsuariosEdicion(tareaData) {
+        const container = document.getElementById('usuariosContainer');
+        if (!container) return;
+        
+        container.querySelectorAll('.usuario-item').forEach(item => {
+            const checkbox = item.querySelector('.usuario-checkbox');
+            
+            if (checkbox.checked) {
+                item.classList.add('seleccionado');
+            }
+            
+            item.addEventListener('click', (e) => {
+                if (e.target !== checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    this._actualizarEstiloItem(item, checkbox.checked);
+                }
+                this._actualizarContadorUsuarios();
+            });
+            
+            checkbox.addEventListener('change', (e) => {
+                this._actualizarEstiloItem(item, e.target.checked);
+                this._actualizarContadorUsuarios();
+            });
         });
-
-        html += `</div>`;
-
-        html += `
-            <div id="cargosSection" style="margin-top: 20px; display: none;">
-                <h6 class="section-title"><i class="fas fa-user-tag"></i> Cargos específicos (opcional)</h6>
-                <div class="cargos-container" id="cargosContainer">
-                    <div class="loading-cargos"><i class="fas fa-spinner fa-spin"></i> Cargando cargos...</div>
-                </div>
-                <div class="selected-summary" id="selectedCargosSummary" style="display: none;">
-                    <i class="fas fa-users"></i>
-                    <span id="selectedCargosCount">0</span> cargos seleccionados
-                </div>
-            </div>
-        `;
-
-        html += `</div>`;
-
-        return html;
+        
+        const seleccionarTodos = document.getElementById('seleccionarTodosUsuarios');
+        const deseleccionarTodos = document.getElementById('deseleccionarTodosUsuarios');
+        
+        if (seleccionarTodos) {
+            seleccionarTodos.addEventListener('click', () => {
+                container.querySelectorAll('.usuario-checkbox').forEach(cb => {
+                    cb.checked = true;
+                    this._actualizarEstiloItem(cb.closest('.usuario-item'), true);
+                });
+                this._actualizarContadorUsuarios();
+            });
+        }
+        
+        if (deseleccionarTodos) {
+            deseleccionarTodos.addEventListener('click', () => {
+                container.querySelectorAll('.usuario-checkbox').forEach(cb => {
+                    cb.checked = false;
+                    this._actualizarEstiloItem(cb.closest('.usuario-item'), false);
+                });
+                this._actualizarContadorUsuarios();
+            });
+        }
+        
+        this._actualizarContadorUsuarios();
     }
-
+    
     _getHTMLAreasEdicion(tareaData) {
         if (this.areasDisponibles.length === 0) {
             return '<p class="no-items">No hay áreas disponibles</p>';
         }
-
+        
         const areaSeleccionada = tareaData?.areaId || null;
         const cargosSeleccionados = tareaData?.cargosIds || [];
-
+        
         let html = `
             <div class="campos-especificos">
                 <h6 class="section-title"><i class="fas fa-building"></i> Asignar a Área</h6>
                 
                 <div class="areas-container" id="areasContainer">
         `;
-
+        
         this.areasDisponibles.forEach(area => {
             const iniciales = this._obtenerIniciales(area.nombreArea);
             const totalCargos = area.cargos ? Object.keys(area.cargos).length : 0;
             const seleccionado = areaSeleccionada === area.id ? 'checked' : '';
-
+            
             html += `
                 <div class="area-item" data-area-id="${area.id}">
                     <input type="radio" class="area-radio" name="areaSeleccionada" value="${area.id}" ${seleccionado}>
@@ -880,9 +1816,9 @@ class TareasController {
                 </div>
             `;
         });
-
+        
         html += `</div>`;
-
+        
         html += `
             <div id="cargosSection" style="margin-top: 20px; ${!areaSeleccionada ? 'display: none;' : ''}">
                 <h6 class="section-title"><i class="fas fa-user-tag"></i> Cargos específicos (opcional)</h6>
@@ -895,581 +1831,42 @@ class TareasController {
                 </div>
             </div>
         `;
-
+        
         html += `</div>`;
-
+        
         return html;
     }
-
-    _getHTMLGeneral() {
-        return `
-            <div class="campos-especificos">
-                <div class="visibility-info" style="padding: 15px; text-align: center;">
-                    <i class="fas fa-eye" style="font-size: 24px; margin-right: 10px;"></i>
-                    <span>Esta nota será visible para <strong>todos los usuarios</strong> de la organización</span>
-                </div>
-            </div>
-        `;
-    }
-
-    // ========== CONFIGURACIÓN DE SELECTORES ==========
-
-    _configurarSelectorUsuariosCreacion() {
-        const container = document.getElementById('usuariosContainer');
-        if (!container) return;
-
-        container.querySelectorAll('.usuario-item').forEach(item => {
-            const checkbox = item.querySelector('.usuario-checkbox');
-
-            item.addEventListener('click', (e) => {
-                if (e.target !== checkbox) {
-                    checkbox.checked = !checkbox.checked;
-                    this._actualizarEstiloItem(item, checkbox.checked);
-                }
-                this._actualizarContadorUsuarios();
-            });
-
-            checkbox.addEventListener('change', (e) => {
-                this._actualizarEstiloItem(item, e.target.checked);
-                this._actualizarContadorUsuarios();
-            });
-        });
-
-        document.getElementById('seleccionarTodosUsuarios')?.addEventListener('click', () => {
-            container.querySelectorAll('.usuario-checkbox').forEach(cb => {
-                cb.checked = true;
-                this._actualizarEstiloItem(cb.closest('.usuario-item'), true);
-            });
-            this._actualizarContadorUsuarios();
-        });
-
-        document.getElementById('deseleccionarTodosUsuarios')?.addEventListener('click', () => {
-            container.querySelectorAll('.usuario-checkbox').forEach(cb => {
-                cb.checked = false;
-                this._actualizarEstiloItem(cb.closest('.usuario-item'), false);
-            });
-            this._actualizarContadorUsuarios();
-        });
-
-        this._actualizarContadorUsuarios();
-    }
-
-    _configurarSelectorAreasCreacion() {
-        const areasContainer = document.getElementById('areasContainer');
-        if (!areasContainer) return;
-
-        areasContainer.querySelectorAll('.area-item').forEach(item => {
-            const radio = item.querySelector('.area-radio');
-
-            item.addEventListener('click', (e) => {
-                if (e.target !== radio) {
-                    radio.checked = true;
-                    this._seleccionarAreaCreacion(item.dataset.areaId);
-                }
-            });
-
-            radio.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    this._seleccionarAreaCreacion(item.dataset.areaId);
-                }
-            });
-        });
-    }
-
-    async _seleccionarAreaCreacion(areaId) {
-        document.querySelectorAll('.area-item').forEach(item => {
-            if (item.dataset.areaId === areaId) {
-                item.classList.add('seleccionado');
-            } else {
-                item.classList.remove('seleccionado');
-            }
-        });
-
-        this.areaSeleccionada = this.areasDisponibles.find(a => a.id === areaId);
-        document.getElementById('cargosSection').style.display = 'block';
-        await this._cargarCargosAreaCreacion(areaId);
-    }
-
-    async _cargarCargosAreaCreacion(areaId) {
-        const area = this.areasDisponibles.find(a => a.id === areaId);
-        if (!area) return;
-
-        const cargosContainer = document.getElementById('cargosContainer');
-        if (!cargosContainer) return;
-
-        let cargos = [];
-        if (area.cargos) {
-            cargos = Object.entries(area.cargos)
-                .filter(([_, cargo]) => cargo.estado !== 'inactivo')
-                .map(([id, cargo]) => ({ id, ...cargo }));
-        }
-
-        if (cargos.length === 0) {
-            cargosContainer.innerHTML = '<p class="no-items">No hay cargos disponibles en esta área</p>';
-            return;
-        }
-
-        let html = '';
-        cargos.forEach(cargo => {
-            html += `
-                <div class="cargo-item" data-cargo-id="${cargo.id}">
-                    <input type="checkbox" class="cargo-checkbox" value="${cargo.id}">
-                    <div class="cargo-icon"><i class="fas fa-user-tie"></i></div>
-                    <div class="cargo-info">
-                        <span class="cargo-nombre">${this._escapeHTML(cargo.nombre)}</span>
-                        <span class="cargo-descripcion">${this._escapeHTML(cargo.descripcion || '')}</span>
-                    </div>
-                </div>
-            `;
-        });
-
-        cargosContainer.innerHTML = html;
-
-        cargosContainer.querySelectorAll('.cargo-item').forEach(item => {
-            const checkbox = item.querySelector('.cargo-checkbox');
-
-            item.addEventListener('click', (e) => {
-                if (e.target !== checkbox) {
-                    checkbox.checked = !checkbox.checked;
-                    this._actualizarEstiloItem(item, checkbox.checked);
-                }
-                this._actualizarContadorCargos();
-            });
-
-            checkbox.addEventListener('change', (e) => {
-                this._actualizarEstiloItem(item, e.target.checked);
-                this._actualizarContadorCargos();
-            });
-        });
-
-        this._actualizarContadorCargos();
-    }
-
-    // ========== UTILIDADES PARA SELECTORES ==========
-
-    _actualizarEstiloItem(item, seleccionado) {
-        if (seleccionado) {
-            item.classList.add('seleccionado');
-        } else {
-            item.classList.remove('seleccionado');
-        }
-    }
-
-    _actualizarContadorUsuarios() {
-        const count = document.querySelectorAll('.usuario-checkbox:checked').length;
-        const span = document.getElementById('selectedUsersCount');
-        if (span) span.textContent = count;
-    }
-
-    _actualizarContadorCargos() {
-        const count = document.querySelectorAll('.cargo-checkbox:checked').length;
-        const summary = document.getElementById('selectedCargosSummary');
-        const span = document.getElementById('selectedCargosCount');
-
-        if (summary && span) {
-            if (count > 0) {
-                span.textContent = count;
-                summary.style.display = 'flex';
-            } else {
-                summary.style.display = 'none';
-            }
-        }
-    }
-
-    // ========== GUARDAR NOTA ==========
-
-    async _guardarNota() {
-        const titulo = document.getElementById('notaTitulo').value.trim();
-        if (!titulo) {
-            this._mostrarError('El título es requerido');
-            return;
-        }
-
-        const tipo = this.tipoSeleccionado;
-        const notaId = document.getElementById('notaId').value;
-        const descripcion = document.getElementById('notaDescripcion').value.trim();
-        const tieneRecordatorio = document.getElementById('tieneRecordatorio').checked;
-        const fechaLimiteInput = document.getElementById('fechaLimite').value;
-
-        const items = {};
-        document.querySelectorAll('#itemsList .item-row').forEach((row, index) => {
-            const checkbox = row.querySelector('.item-checkbox');
-            const input = row.querySelector('.item-texto');
-            const texto = input.value.trim();
-
-            if (texto) {
-                const itemId = row.dataset.itemId || `item_${Date.now()}_${index}`;
-                items[itemId] = {
-                    id: itemId,
-                    texto: texto,
-                    completado: checkbox ? checkbox.checked : false,
-                    fechaCreacion: new Date().toISOString()
-                };
-            }
-        });
-
-        let usuariosCompartidosIds = [];
-        let areaId = null;
-        let cargosIds = [];
-
-        if (tipo === 'compartida') {
-            usuariosCompartidosIds = Array.from(document.querySelectorAll('.usuario-checkbox:checked')).map(cb => cb.value);
-        } else if (tipo === 'area') {
-            const areaRadio = document.querySelector('.area-radio:checked');
-            if (areaRadio) {
-                areaId = areaRadio.value;
-                cargosIds = Array.from(document.querySelectorAll('.cargo-checkbox:checked')).map(cb => cb.value);
-            } else {
-                this._mostrarError('Debes seleccionar un área');
-                return;
-            }
-        }
-
-        let fechaLimite = null;
-        if (tieneRecordatorio && fechaLimiteInput) {
-            fechaLimite = new Date(fechaLimiteInput);
-            fechaLimite.setHours(23, 59, 59, 999);
-        }
-
-        const tareaData = {
-            nombreActividad: titulo,
-            descripcion: descripcion,
-            items: items,
-            tipo: tipo === 'general' ? 'global' : tipo,
-            fechaLimite: fechaLimite,
-            tieneRecordatorio: tieneRecordatorio
-        };
-
-        if (tipo === 'compartida') {
-            tareaData.usuariosCompartidosIds = usuariosCompartidosIds;
-        } else if (tipo === 'area') {
-            tareaData.areaId = areaId;
-            tareaData.cargosIds = cargosIds;
-        }
-
-        Swal.fire({
-            title: 'Guardando...',
-            html: '<i class="fas fa-spinner fa-spin"></i>',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            background: 'var(--color-bg-secondary)'
-        });
-
-        try {
-            let resultado;
-            if (notaId) {
-                // Obtener tarea original antes de editar para registrar cambios
-                const tareaOriginal = await this.tareaManager.getTareaById(
-                    notaId, this.usuarioActual.organizacionCamelCase
-                );
-                
-                await this.tareaManager.actualizarTarea(
-                    notaId, tareaData,
-                    this.usuarioActual, this.usuarioActual.organizacionCamelCase
-                );
-                
-                // Detectar cambios
-                const cambios = this._detectarCambiosTarea(tareaOriginal, tareaData);
-                await this._registrarEdicionTarea(tareaOriginal, tareaData, cambios);
-            } else {
-                resultado = await this.tareaManager.crearTarea(tareaData, this.usuarioActual);
-                await this._registrarCreacionTarea(tareaData, resultado);
-            }
-
-            Swal.close();
-
-            await Swal.fire({
-                icon: 'success',
-                title: 'Éxito',
-                text: `Nota ${notaId ? 'actualizada' : 'creada'} correctamente`,
-                timer: 1500,
-                showConfirmButton: false,
-                background: 'var(--color-bg-secondary)'
-            });
-
-            this._ocultarFormulario();
-            await this._cargarTareas();
-
-        } catch (error) {
-            Swal.close();
-            this._mostrarError(error.message);
-        }
-    }
-
-    // ✅ NUEVO: Detectar cambios en tarea para registro
-    _detectarCambiosTarea(original, actualizada) {
-        const cambios = [];
-
-        if (original.nombreActividad !== actualizada.nombreActividad) {
-            cambios.push({
-                campo: 'título',
-                anterior: original.nombreActividad,
-                nuevo: actualizada.nombreActividad
-            });
-        }
-
-        if (original.descripcion !== actualizada.descripcion) {
-            cambios.push({
-                campo: 'descripción',
-                anterior: original.descripcion?.substring(0, 50) || '',
-                nuevo: actualizada.descripcion?.substring(0, 50) || ''
-            });
-        }
-
-        if (original.tipo !== actualizada.tipo) {
-            cambios.push({
-                campo: 'tipo',
-                anterior: original.tipo === 'global' ? 'general' : original.tipo,
-                nuevo: actualizada.tipo === 'global' ? 'general' : actualizada.tipo
-            });
-        }
-
-        if (original.tieneRecordatorio !== actualizada.tieneRecordatorio) {
-            cambios.push({
-                campo: 'recordatorio',
-                anterior: original.tieneRecordatorio ? 'activado' : 'desactivado',
-                nuevo: actualizada.tieneRecordatorio ? 'activado' : 'desactivado'
-            });
-        }
-
-        // Detectar cambios en items (agregados, eliminados, modificados)
-        const itemsOriginales = original.items ? Object.values(original.items) : [];
-        const itemsActuales = actualizada.items ? Object.values(actualizada.items) : [];
-
-        const itemsAgregados = itemsActuales.filter(i => 
-            !itemsOriginales.some(o => o.id === i.id)
-        );
-        if (itemsAgregados.length > 0) {
-            cambios.push({
-                campo: 'items',
-                tipo: 'agregados',
-                cantidad: itemsAgregados.length,
-                items: itemsAgregados.map(i => ({ id: i.id, texto: i.texto?.substring(0, 30) }))
-            });
-        }
-
-        const itemsEliminados = itemsOriginales.filter(o => 
-            !itemsActuales.some(i => i.id === o.id)
-        );
-        if (itemsEliminados.length > 0) {
-            cambios.push({
-                campo: 'items',
-                tipo: 'eliminados',
-                cantidad: itemsEliminados.length
-            });
-        }
-
-        const itemsModificados = itemsActuales.filter(i => {
-            const originalItem = itemsOriginales.find(o => o.id === i.id);
-            return originalItem && originalItem.texto !== i.texto;
-        });
-        if (itemsModificados.length > 0) {
-            cambios.push({
-                campo: 'items',
-                tipo: 'modificados',
-                cantidad: itemsModificados.length
-            });
-        }
-
-        return cambios;
-    }
-
-    // ========== ABRIR FORMULARIO DE EDICIÓN (CON SCROLL AL FORMULARIO) ==========
-
-    async _abrirFormularioEdicion(tareaId) {
-        Swal.fire({
-            title: 'Cargando...',
-            html: '<i class="fas fa-spinner fa-spin"></i>',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            background: 'var(--color-bg-secondary)'
-        });
-
-        try {
-            this.tareaActual = await this.tareaManager.getTareaById(
-                tareaId, this.usuarioActual.organizacionCamelCase
-            );
-
-            if (!this.tareaActual) throw new Error('Nota no encontrada');
-
-            Swal.close();
-
-            this.modoEdicion = true;
-            this.tipoSeleccionado = this.tareaActual.tipo === 'global' ? 'general' : this.tareaActual.tipo;
-            this.areaSeleccionada = null;
-
-            document.getElementById('notaId').value = this.tareaActual.id;
-            document.getElementById('notaTitulo').value = this.tareaActual.nombreActividad || '';
-            document.getElementById('notaDescripcion').value = this.tareaActual.descripcion || '';
-
-            const items = this.tareaActual.items ? Object.values(this.tareaActual.items) : [];
-            this._renderizarItemsInline(items);
-
-            const tieneRecordatorio = this.tareaActual.tieneRecordatorio || false;
-            document.getElementById('tieneRecordatorio').checked = tieneRecordatorio;
-
-            if (this.tareaActual.fechaLimite) {
-                const fecha = new Date(this.tareaActual.fechaLimite);
-                document.getElementById('fechaLimite').value = fecha.toISOString().split('T')[0];
-            } else {
-                document.getElementById('fechaLimite').value = '';
-            }
-
-            document.getElementById('fechaContainer').style.display = tieneRecordatorio ? 'block' : 'none';
-
-            const titulos = {
-                'general': 'Editar Nota General',
-                'personal': 'Editar Nota Personal',
-                'compartida': 'Editar Nota Compartida',
-                'area': 'Editar Nota por Área'
-            };
-            document.getElementById('formularioTitulo').textContent = titulos[this.tipoSeleccionado] || 'Editar Nota';
-
-            document.querySelectorAll('.tipo-option').forEach(opt => {
-                if (opt.dataset.tipo === this.tipoSeleccionado) {
-                    opt.classList.add('seleccionado');
-                } else {
-                    opt.classList.remove('seleccionado');
-                }
-            });
-
-            await this._renderizarCamposEspecificosEdicion(this.tipoSeleccionado, this.tareaActual);
-
-            const formulario = document.getElementById('formularioCreacion');
-            const tituloInput = document.getElementById('notaTitulo');
-
-            // Mostrar el formulario
-            formulario.style.display = 'block';
-
-            // Esperar a que el DOM se actualice y luego desplazar al formulario
-            setTimeout(() => {
-                formulario.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start',
-                    inline: 'nearest'
-                });
-
-                // Enfocar el título después del scroll
-                setTimeout(() => {
-                    if (tituloInput) {
-                        tituloInput.focus();
-                        tituloInput.select();
-                    }
-                }, 500);
-            }, 100);
-
-        } catch (error) {
-            Swal.close();
-            this._mostrarError('Error al cargar la nota');
-        }
-    }
-
-    async _renderizarCamposEspecificosEdicion(tipo, tareaData) {
-        const container = document.getElementById('camposEspecificos');
-        if (!container) return;
-
-        let html = '';
-
-        switch (tipo) {
-            case 'personal':
-                html = '';
-                break;
-            case 'compartida':
-                html = this._getHTMLUsuariosEdicion(tareaData);
-                break;
-            case 'area':
-                html = this._getHTMLAreasEdicion(tareaData);
-                break;
-            case 'general':
-                html = this._getHTMLGeneral();
-                break;
-            default:
-                html = '';
-        }
-
-        container.innerHTML = html;
-
-        if (tipo === 'compartida' && html) {
-            this._configurarSelectorUsuariosEdicion(tareaData);
-        } else if (tipo === 'area' && html) {
-            await this._configurarSelectorAreasEdicion(tareaData);
-        }
-    }
-
-    _configurarSelectorUsuariosEdicion(tareaData) {
-        const container = document.getElementById('usuariosContainer');
-        if (!container) return;
-
-        container.querySelectorAll('.usuario-item').forEach(item => {
-            const checkbox = item.querySelector('.usuario-checkbox');
-
-            if (checkbox.checked) {
-                item.classList.add('seleccionado');
-            }
-
-            item.addEventListener('click', (e) => {
-                if (e.target !== checkbox) {
-                    checkbox.checked = !checkbox.checked;
-                    this._actualizarEstiloItem(item, checkbox.checked);
-                }
-                this._actualizarContadorUsuarios();
-            });
-
-            checkbox.addEventListener('change', (e) => {
-                this._actualizarEstiloItem(item, e.target.checked);
-                this._actualizarContadorUsuarios();
-            });
-        });
-
-        document.getElementById('seleccionarTodosUsuarios')?.addEventListener('click', () => {
-            container.querySelectorAll('.usuario-checkbox').forEach(cb => {
-                cb.checked = true;
-                this._actualizarEstiloItem(cb.closest('.usuario-item'), true);
-            });
-            this._actualizarContadorUsuarios();
-        });
-
-        document.getElementById('deseleccionarTodosUsuarios')?.addEventListener('click', () => {
-            container.querySelectorAll('.usuario-checkbox').forEach(cb => {
-                cb.checked = false;
-                this._actualizarEstiloItem(cb.closest('.usuario-item'), false);
-            });
-            this._actualizarContadorUsuarios();
-        });
-
-        this._actualizarContadorUsuarios();
-    }
-
+    
     async _configurarSelectorAreasEdicion(tareaData) {
         const areasContainer = document.getElementById('areasContainer');
         if (!areasContainer) return;
-
+        
         areasContainer.querySelectorAll('.area-item').forEach(item => {
             const radio = item.querySelector('.area-radio');
-
+            
             if (radio.checked) {
                 item.classList.add('seleccionado');
             }
-
+            
             item.addEventListener('click', (e) => {
                 if (e.target !== radio) {
                     radio.checked = true;
                     this._seleccionarAreaEdicion(item.dataset.areaId, tareaData);
                 }
             });
-
+            
             radio.addEventListener('change', (e) => {
                 if (e.target.checked) {
                     this._seleccionarAreaEdicion(item.dataset.areaId, tareaData);
                 }
             });
         });
-
+        
         if (tareaData?.areaId) {
             await this._cargarCargosAreaEdicion(tareaData.areaId, tareaData);
         }
     }
-
+    
     async _seleccionarAreaEdicion(areaId, tareaData) {
         document.querySelectorAll('.area-item').forEach(item => {
             if (item.dataset.areaId === areaId) {
@@ -1478,33 +1875,34 @@ class TareasController {
                 item.classList.remove('seleccionado');
             }
         });
-
+        
         this.areaSeleccionada = this.areasDisponibles.find(a => a.id === areaId);
-        document.getElementById('cargosSection').style.display = 'block';
+        const cargosSection = document.getElementById('cargosSection');
+        if (cargosSection) cargosSection.style.display = 'block';
         await this._cargarCargosAreaEdicion(areaId, tareaData);
     }
-
+    
     async _cargarCargosAreaEdicion(areaId, tareaData = null) {
         const area = this.areasDisponibles.find(a => a.id === areaId);
         if (!area) return;
-
+        
         const cargosContainer = document.getElementById('cargosContainer');
         if (!cargosContainer) return;
-
+        
         let cargos = [];
         if (area.cargos) {
             cargos = Object.entries(area.cargos)
                 .filter(([_, cargo]) => cargo.estado !== 'inactivo')
                 .map(([id, cargo]) => ({ id, ...cargo }));
         }
-
+        
         if (cargos.length === 0) {
             cargosContainer.innerHTML = '<p class="no-items">No hay cargos disponibles en esta área</p>';
             return;
         }
-
+        
         const cargosSeleccionados = tareaData?.cargosIds || [];
-
+        
         let html = '';
         cargos.forEach(cargo => {
             const seleccionado = cargosSeleccionados.includes(cargo.id) ? 'checked' : '';
@@ -1519,16 +1917,16 @@ class TareasController {
                 </div>
             `;
         });
-
+        
         cargosContainer.innerHTML = html;
-
+        
         cargosContainer.querySelectorAll('.cargo-item').forEach(item => {
             const checkbox = item.querySelector('.cargo-checkbox');
-
+            
             if (checkbox.checked) {
                 item.classList.add('seleccionado');
             }
-
+            
             item.addEventListener('click', (e) => {
                 if (e.target !== checkbox) {
                     checkbox.checked = !checkbox.checked;
@@ -1536,87 +1934,42 @@ class TareasController {
                 }
                 this._actualizarContadorCargos();
             });
-
+            
             checkbox.addEventListener('change', (e) => {
                 this._actualizarEstiloItem(item, e.target.checked);
                 this._actualizarContadorCargos();
             });
         });
-
+        
         this._actualizarContadorCargos();
     }
-
-    // ========== ELIMINAR TAREA ==========
-
-    async _eliminarTarea(tareaId) {
-        // Obtener la tarea antes de eliminarla para registrar detalles
-        const tarea = this.todasLasTareas.find(t => t.id === tareaId);
-
-        const result = await Swal.fire({
-            title: '¿Eliminar nota?',
-            text: 'Esta acción no se puede deshacer',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            background: 'var(--color-bg-secondary)',
-            confirmButtonColor: '#dc3545'
-        });
-
-        if (!result.isConfirmed) return;
-
-        Swal.fire({
-            title: 'Eliminando...',
-            html: '<i class="fas fa-spinner fa-spin"></i>',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            background: 'var(--color-bg-secondary)'
-        });
-
-        try {
-            await this.tareaManager.eliminarTarea(
-                tareaId, this.usuarioActual, this.usuarioActual.organizacionCamelCase
-            );
-
-            // ✅ NUEVO: Registrar eliminación en bitácora
-            if (tarea) {
-                await this._registrarEliminacionTarea(tarea);
-            }
-
-            Swal.close();
-
-            await Swal.fire({
-                icon: 'success',
-                title: 'Eliminada',
-                text: 'La nota se eliminó correctamente',
-                timer: 1500,
-                showConfirmButton: false,
-                background: 'var(--color-bg-secondary)'
-            });
-
-            await this._cargarTareas();
-
-        } catch (error) {
-            Swal.close();
-            this._mostrarError(error.message);
-        }
-    }
-
-    // ========== CONFIGURACIÓN DE EVENTOS ==========
-
+    
+    // =============================================
+    // CONFIGURACIÓN DE EVENTOS
+    // =============================================
+    
     _configurarEventos() {
-        document.getElementById('btnCrearNota')?.addEventListener('click', () => {
-            this._mostrarFormularioCreacion();
-        });
-
-        document.getElementById('cerrarFormulario')?.addEventListener('click', () => {
-            this._ocultarFormulario();
-        });
-
-        document.getElementById('cancelarNota')?.addEventListener('click', () => {
-            this._ocultarFormulario();
-        });
-
+        const btnCrearNota = document.getElementById('btnCrearNota');
+        if (btnCrearNota) {
+            btnCrearNota.addEventListener('click', () => {
+                this._mostrarFormularioCreacion();
+            });
+        }
+        
+        const cerrarFormulario = document.getElementById('cerrarFormulario');
+        if (cerrarFormulario) {
+            cerrarFormulario.addEventListener('click', () => {
+                this._ocultarFormulario();
+            });
+        }
+        
+        const cancelarNota = document.getElementById('cancelarNota');
+        if (cancelarNota) {
+            cancelarNota.addEventListener('click', () => {
+                this._ocultarFormulario();
+            });
+        }
+        
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1625,35 +1978,52 @@ class TareasController {
                 this._aplicarFiltros();
             });
         });
-
-        document.getElementById('searchInput')?.addEventListener('input', (e) => {
-            clearTimeout(this.searchTimeout);
-            this.searchTimeout = setTimeout(() => {
-                this.terminoBusqueda = e.target.value.trim().toLowerCase();
-                this._aplicarFiltros();
-            }, 300);
-        });
-
+        
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => {
+                    this.terminoBusqueda = e.target.value.trim().toLowerCase();
+                    this._aplicarFiltros();
+                }, 300);
+            });
+        }
+        
         document.querySelectorAll('.tipo-option').forEach(opt => {
             opt.addEventListener('click', () => {
                 const tipo = opt.dataset.tipo;
                 this._seleccionarTipoFormulario(tipo);
             });
         });
-
-        document.getElementById('guardarNota')?.addEventListener('click', () => this._guardarNota());
-
-        document.getElementById('tieneRecordatorio')?.addEventListener('change', (e) => {
-            document.getElementById('fechaContainer').style.display = e.target.checked ? 'block' : 'none';
-        });
-
-        document.getElementById('btnAgregarItem')?.addEventListener('click', () => {
-            this._agregarItemFormulario();
-        });
+        
+        const guardarNota = document.getElementById('guardarNota');
+        if (guardarNota) {
+            guardarNota.addEventListener('click', () => this._guardarNota());
+        }
+        
+        const tieneRecordatorio = document.getElementById('tieneRecordatorio');
+        if (tieneRecordatorio) {
+            tieneRecordatorio.addEventListener('change', (e) => {
+                const fechaContainer = document.getElementById('fechaContainer');
+                if (fechaContainer) {
+                    fechaContainer.style.display = e.target.checked ? 'block' : 'none';
+                }
+            });
+        }
+        
+        const btnAgregarItem = document.getElementById('btnAgregarItem');
+        if (btnAgregarItem) {
+            btnAgregarItem.addEventListener('click', () => {
+                this._agregarItemFormulario();
+            });
+        }
     }
-
-    // ========== ESTADOS DE UI ==========
-
+    
+    // =============================================
+    // UTILIDADES DE UI
+    // =============================================
+    
     _mostrarCarga() {
         const container = document.getElementById('tareasGrid');
         if (container) {
@@ -1667,7 +2037,7 @@ class TareasController {
             `;
         }
     }
-
+    
     _mostrarErrorEnGrid(mensaje) {
         const container = document.getElementById('tareasGrid');
         if (container) {
@@ -1685,7 +2055,7 @@ class TareasController {
             `;
         }
     }
-
+    
     _getEmptyStateHTML() {
         return `
             <div class="empty-state">
@@ -1697,14 +2067,21 @@ class TareasController {
             </div>
         `;
     }
-
-    // ========== UTILIDADES ==========
-
+    
+    // =============================================
+    // UTILIDADES GENERALES
+    // =============================================
+    
+    _generarCamelCase(texto) {
+        if (!texto) return 'sinOrganizacion';
+        return texto.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase()).replace(/[^a-zA-Z0-9]/g, '');
+    }
+    
     _obtenerIniciales(nombre) {
         if (!nombre) return 'U';
         return nombre.split(' ').map(p => p[0]).join('').toUpperCase().substring(0, 2);
     }
-
+    
     _escapeHTML(text) {
         if (!text) return '';
         return String(text)
@@ -1714,7 +2091,7 @@ class TareasController {
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
     }
-
+    
     _mostrarError(mensaje) {
         Swal.fire({
             icon: 'error',
@@ -1724,8 +2101,16 @@ class TareasController {
             confirmButtonColor: '#2f8cff'
         });
     }
+    
+    _desconectar() {
+        if (this.unsubscribeTareas) {
+            this.unsubscribeTareas();
+            this.unsubscribeTareas = null;
+        }
+    }
 }
 
+// Inicializar
 document.addEventListener('DOMContentLoaded', () => {
     new TareasController();
 });

@@ -1,4 +1,5 @@
 // mercanciaPerdida.js - CLASE COMPLETA PARA REGISTRO DE MERCANCÍA PERDIDA/ROBADA
+// VERSIÓN OPTIMIZADA CON GENERACIÓN EN SEGUNDO PLANO
 
 import {
     collection,
@@ -47,6 +48,14 @@ class MercanciaPerdida {
         this.ubicacion = data.ubicacion || '';
         this.responsableAsignado = data.responsableAsignado || '';
         this.responsableAsignadoNombre = data.responsableAsignadoNombre || '';
+        
+        // ========== NUEVOS CAMPOS PARA PDF OPTIMIZADO ==========
+        this.pdfUrl = data.pdfUrl || null;
+        this.pdfGenerado = data.pdfGenerado || false;
+        this.pdfGeneradoEn = data.pdfGeneradoEn ? this._convertirFecha(data.pdfGeneradoEn) : null;
+        this.estadoGeneracion = data.estadoGeneracion || 'pendiente'; // pendiente, generando, completado, error
+        this.intentosGeneracion = data.intentosGeneracion || 0;
+        // =======================================================
         
         // Campos de auditoría
         this.organizacionCamelCase = data.organizacionCamelCase || '';
@@ -150,6 +159,32 @@ class MercanciaPerdida {
         return `${this.getRutaStorageBase()}/evidencias`;
     }
 
+    // ========== NUEVOS MÉTODOS PARA PDF ==========
+    tienePDF() {
+        return this.pdfGenerado === true && this.pdfUrl !== null;
+    }
+    
+    getEstadoGeneracionTexto() {
+        const estados = {
+            'pendiente': 'Pendiente',
+            'generando': 'Generando PDF...',
+            'completado': 'PDF Listo',
+            'error': 'Error al generar'
+        };
+        return estados[this.estadoGeneracion] || 'Pendiente';
+    }
+    
+    getEstadoGeneracionColor() {
+        const colores = {
+            'pendiente': '#ffc107',
+            'generando': '#17a2b8',
+            'completado': '#28a745',
+            'error': '#dc3545'
+        };
+        return colores[this.estadoGeneracion] || '#6c757d';
+    }
+    // ============================================
+
     agregarEvidencia(url, comentario = '') {
         const evidenciaId = `EVD${Date.now()}`;
         
@@ -194,7 +229,6 @@ class MercanciaPerdida {
             this.estado = 'recuperado';
         }
         
-        // Registrar en historial de recuperaciones
         if (!this.historialRecuperaciones) {
             this.historialRecuperaciones = [];
         }
@@ -229,6 +263,11 @@ class MercanciaPerdida {
             responsableAsignado: this.responsableAsignado,
             responsableAsignadoNombre: this.responsableAsignadoNombre,
             historialRecuperaciones: this.historialRecuperaciones,
+            pdfUrl: this.pdfUrl,
+            pdfGenerado: this.pdfGenerado,
+            pdfGeneradoEn: this.pdfGeneradoEn,
+            estadoGeneracion: this.estadoGeneracion,
+            intentosGeneracion: this.intentosGeneracion,
             organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             creadoPorNombre: this.creadoPorNombre,
@@ -264,6 +303,12 @@ class MercanciaPerdida {
             ubicacion: this.ubicacion,
             responsableAsignado: this.responsableAsignado,
             responsableAsignadoNombre: this.responsableAsignadoNombre,
+            pdfUrl: this.pdfUrl,
+            pdfGenerado: this.pdfGenerado,
+            estadoGeneracion: this.estadoGeneracion,
+            estadoGeneracionTexto: this.getEstadoGeneracionTexto(),
+            estadoGeneracionColor: this.getEstadoGeneracionColor(),
+            tienePDF: this.tienePDF(),
             organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             creadoPorNombre: this.creadoPorNombre,
@@ -383,7 +428,8 @@ class MercanciaPerdidaManager {
                             id: doc.id,
                             fecha: data.fecha?.toDate?.() || data.fecha,
                             fechaCreacion: data.fechaCreacion?.toDate?.() || data.fechaCreacion,
-                            fechaActualizacion: data.fechaActualizacion?.toDate?.() || data.fechaActualizacion
+                            fechaActualizacion: data.fechaActualizacion?.toDate?.() || data.fechaActualizacion,
+                            pdfGeneradoEn: data.pdfGeneradoEn?.toDate?.() || data.pdfGeneradoEn
                         });
                         registros.push(registro);
                     } catch (error) {
@@ -555,6 +601,13 @@ class MercanciaPerdidaManager {
                 responsableAsignado: data.responsableAsignado || '',
                 responsableAsignadoNombre: data.responsableAsignadoNombre || '',
                 historialRecuperaciones: [],
+                // ========== NUEVOS CAMPOS ==========
+                pdfUrl: null,
+                pdfGenerado: false,
+                pdfGeneradoEn: null,
+                estadoGeneracion: 'pendiente',
+                intentosGeneracion: 0,
+                // ==================================
                 organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
                 creadoPorNombre: usuarioActual.nombreCompleto || '',
@@ -615,7 +668,11 @@ class MercanciaPerdidaManager {
 
             if (registroSnap.exists()) {
                 const data = registroSnap.data();
-                const registro = new MercanciaPerdida(registroId, { ...data, id: registroId });
+                const registro = new MercanciaPerdida(registroId, { 
+                    ...data, 
+                    id: registroId,
+                    pdfGeneradoEn: data.pdfGeneradoEn?.toDate?.() || data.pdfGeneradoEn
+                });
                 this.registros.push(registro);
                 return registro;
             }
@@ -626,6 +683,50 @@ class MercanciaPerdidaManager {
             return null;
         }
     }
+    // Agregar este método después de getRegistroById
+
+async actualizarEstadoPDF(registroId, estado, pdfUrl = null, organizacionCamelCase, usuarioActual = null) {
+    try {
+        const collectionName = this._getCollectionName(organizacionCamelCase);
+        const registroRef = doc(db, collectionName, registroId);
+        
+        const updateData = {
+            estadoGeneracion: estado,
+            fechaActualizacion: serverTimestamp(),
+            actualizadoPor: usuarioActual?.id || 'sistema',
+            actualizadoPorNombre: usuarioActual?.nombreCompleto || 'Sistema'
+        };
+        
+        if (estado === 'completado' && pdfUrl) {
+            updateData.pdfUrl = pdfUrl;
+            updateData.pdfGenerado = true;
+            updateData.pdfGeneradoEn = serverTimestamp();
+        }
+        
+        if (estado === 'error') {
+            updateData.intentosGeneracion = (await this.getRegistroById(registroId, organizacionCamelCase))?.intentosGeneracion + 1 || 1;
+        }
+        
+        await consumo.registrarFirestoreActualizacion(collectionName, registroId);
+        await updateDoc(registroRef, updateData);
+        
+        // Actualizar caché
+        const registroIndex = this.registros.findIndex(r => r.id === registroId);
+        if (registroIndex !== -1) {
+            if (estado === 'completado' && pdfUrl) {
+                this.registros[registroIndex].pdfUrl = pdfUrl;
+                this.registros[registroIndex].pdfGenerado = true;
+                this.registros[registroIndex].pdfGeneradoEn = new Date();
+            }
+            this.registros[registroIndex].estadoGeneracion = estado;
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Error actualizando estado PDF:', error);
+        return false;
+    }
+}
 
     async getRegistrosByOrganizacion(organizacionCamelCase, filtros = {}, usuarioActual = null) {
         try {
@@ -654,7 +755,11 @@ class MercanciaPerdidaManager {
             const registros = [];
             snapshot.forEach(doc => {
                 try {
-                    const registro = new MercanciaPerdida(doc.id, doc.data());
+                    const data = doc.data();
+                    const registro = new MercanciaPerdida(doc.id, {
+                        ...data,
+                        pdfGeneradoEn: data.pdfGeneradoEn?.toDate?.() || data.pdfGeneradoEn
+                    });
                     registros.push(registro);
                 } catch (error) {
                     console.error('Error procesando registro:', error);
@@ -683,110 +788,49 @@ class MercanciaPerdidaManager {
             return [];
         }
     }
-    async cargarImagenMultiEstrategia(url, intento = 0) {
-    const urlNormalizada = this.normalizarUrl(url);
-    if (!this.esUrlValida(urlNormalizada)) {
-        throw new Error('URL inválida');
-    }
-    
-    const cacheKey = `${urlNormalizada}_${intento}`;
-    if (this.imageCache.has(cacheKey)) {
-        return this.imageCache.get(cacheKey);
-    }
-    
-    if (this.pendingImages.has(cacheKey)) {
-        return await this.pendingImages.get(cacheKey);
-    }
-    
-    const estrategias = [
-        async () => this.cargarImagenConTimeout(urlNormalizada),
-        async () => {
-            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(urlNormalizada)}`;
-            return await this.cargarImagenConTimeout(proxyUrl, 10000);
-        },
-        async () => {
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(urlNormalizada)}`;
-            return await this.cargarImagenConTimeout(proxyUrl, 10000);
-        },
-        async () => {
-            const proxyUrl = `https://cors-anywhere.herokuapp.com/${urlNormalizada}`;
-            return await this.cargarImagenConTimeout(proxyUrl, 10000);
-        },
-        async () => {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                const timeoutId = setTimeout(() => {
-                    reject(new Error('Image element timeout'));
-                }, IMAGEN_CONFIG.TIMEOUT);
-                
-                img.onload = () => {
-                    clearTimeout(timeoutId);
-                    const canvas = document.createElement('canvas');
-                    const maxDimension = 1024;
-                    let width = img.width;
-                    let height = img.height;
-                    
-                    if (width > maxDimension || height > maxDimension) {
-                        if (width > height) {
-                            height = (height * maxDimension) / width;
-                            width = maxDimension;
-                        } else {
-                            width = (width * maxDimension) / height;
-                            height = maxDimension;
-                        }
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.85));
-                };
-                
-                img.onerror = () => {
-                    clearTimeout(timeoutId);
-                    reject(new Error('Failed to load image'));
-                };
-                
-                img.crossOrigin = 'Anonymous';
-                img.src = urlNormalizada;
-            });
-        }
-    ];
-    
-    const cargaPromise = (async () => {
-        let lastError = null;
-        
-        for (let i = 0; i < estrategias.length; i++) {
-            try {
-                const resultado = await estrategias[i]();
-                if (resultado) {
-                    this.imageCache.set(cacheKey, resultado);
-                    setTimeout(() => {
-                        this.imageCache.delete(cacheKey);
-                    }, IMAGEN_CONFIG.CACHE_DURATION);
-                    return resultado;
-                }
-            } catch (error) {
-                lastError = error;
-                console.warn(`Estrategia ${i + 1} falló para ${urlNormalizada}:`, error.message);
-                await new Promise(r => setTimeout(r, 200));
+
+    async actualizarEstadoPDF(registroId, estado, pdfUrl = null, organizacionCamelCase, usuarioActual = null) {
+        try {
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const registroRef = doc(db, collectionName, registroId);
+            
+            const updateData = {
+                estadoGeneracion: estado,
+                fechaActualizacion: serverTimestamp(),
+                actualizadoPor: usuarioActual?.id || 'sistema',
+                actualizadoPorNombre: usuarioActual?.nombreCompleto || 'Sistema'
+            };
+            
+            if (estado === 'completado' && pdfUrl) {
+                updateData.pdfUrl = pdfUrl;
+                updateData.pdfGenerado = true;
+                updateData.pdfGeneradoEn = serverTimestamp();
             }
+            
+            if (estado === 'error') {
+                updateData.intentosGeneracion = (await this.getRegistroById(registroId, organizacionCamelCase))?.intentosGeneracion + 1 || 1;
+            }
+            
+            await consumo.registrarFirestoreActualizacion(collectionName, registroId);
+            await updateDoc(registroRef, updateData);
+            
+            // Actualizar caché
+            const registroIndex = this.registros.findIndex(r => r.id === registroId);
+            if (registroIndex !== -1) {
+                if (estado === 'completado' && pdfUrl) {
+                    this.registros[registroIndex].pdfUrl = pdfUrl;
+                    this.registros[registroIndex].pdfGenerado = true;
+                    this.registros[registroIndex].pdfGeneradoEn = new Date();
+                }
+                this.registros[registroIndex].estadoGeneracion = estado;
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Error actualizando estado PDF:', error);
+            return false;
         }
-        
-        throw lastError || new Error('Todas las estrategias fallaron');
-    })();
-    
-    this.pendingImages.set(cacheKey, cargaPromise);
-    
-    try {
-        return await cargaPromise;
-    } finally {
-        setTimeout(() => {
-            this.pendingImages.delete(cacheKey);
-        }, 1000);
     }
-}
 
     async actualizarRegistro(registroId, nuevosDatos, usuarioId, organizacionCamelCase, usuarioActual = null) {
         try {
@@ -1064,7 +1108,11 @@ class MercanciaPerdidaManager {
                 totalNeto: totalPerdido - totalRecuperado,
                 porcentajeRecuperado: totalPerdido > 0 ? (totalRecuperado / totalPerdido) * 100 : 0,
                 conEvidencias: registros.filter(r => (r.evidencias || []).length > 0).length,
-                totalEvidencias: registros.reduce((acc, r) => acc + (r.evidencias || []).length, 0)
+                totalEvidencias: registros.reduce((acc, r) => acc + (r.evidencias || []).length, 0),
+                // ========== NUEVAS ESTADÍSTICAS ==========
+                pdfGenerados: registros.filter(r => r.pdfGenerado === true).length,
+                pdfPendientes: registros.filter(r => r.estadoGeneracion === 'pendiente').length,
+                pdfEnError: registros.filter(r => r.estadoGeneracion === 'error').length
             };
         } catch (error) {
             console.error('Error obteniendo estadísticas:', error);

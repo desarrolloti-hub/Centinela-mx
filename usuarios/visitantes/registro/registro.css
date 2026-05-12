@@ -441,6 +441,7 @@ body {
         opacity: 0;
         transform: translateY(-10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -452,6 +453,7 @@ body {
         opacity: 1;
         transform: translateY(0);
     }
+
     to {
         opacity: 0;
         transform: translateY(-10px);
@@ -464,7 +466,7 @@ body {
     .edit-wrapper {
         max-width: 850px;
     }
-    
+
     .photo-container {
         width: 200px;
         height: 200px;
@@ -490,7 +492,7 @@ body {
     .action-buttons {
         flex-direction: column;
     }
-    
+
     /* SweetAlert2 responsive - usando estilos de personalization.css */
     .swal2-popup {
         width: 90% !important;
@@ -498,6 +500,7 @@ body {
 }
 
 @media (max-width: 600px) {
+
     .edit-left-panel,
     .edit-right-panel {
         padding: 1.5rem;
@@ -525,7 +528,7 @@ body {
         width: 100%;
         min-width: auto;
     }
-    
+
     .action-buttons {
         gap: 0.75rem;
     }
@@ -536,33 +539,33 @@ body {
         width: 140px;
         height: 140px;
     }
-    
+
     .edit-overlay {
         width: 40px;
         height: 40px;
     }
-    
+
     .edit-main-title {
         font-size: 1.125rem;
     }
-    
+
     .form-input-field {
         height: 45px;
         padding: 0.75rem;
     }
-    
+
     .action-btn,
     .back-btn {
         height: 45px;
         font-size: 0.8125rem;
     }
-    
+
     /* SweetAlert2 responsive - usando estilos de personalization.css */
     .swal2-actions {
         flex-direction: column !important;
         width: 100% !important;
     }
-    
+
     .swal2-styled {
         width: 100% !important;
         margin: 0.25rem 0 !important;
@@ -574,6 +577,7 @@ body {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -584,6 +588,7 @@ body {
         transform: translateX(100%);
         opacity: 0;
     }
+
     to {
         transform: translateX(0);
         opacity: 1;
@@ -595,6 +600,7 @@ body {
         transform: translateX(0);
         opacity: 1;
     }
+
     to {
         transform: translateX(100%);
         opacity: 0;

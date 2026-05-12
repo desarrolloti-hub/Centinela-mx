@@ -1,262 +1,300 @@
-// ========== panelControl.js - PANEL DE CONTROL CON PERMISOS ==========
-// VERSIÓN ACTUALIZADA - Incluye módulos: Usuarios, Estadísticas, Tareas, Mapa de Alertas
+// ========== panelControl.js - PANEL DE CONTROL COLABORADOR ==========
+// SOLO USA LAS CLASES EXISTENTES, SIN IMPORTAR FIREBASE DIRECTAMENTE
 
-// ========== VARIABLES GLOBALES ==========
 let permisoManager = null;
 let usuarioActual = null;
 let permisosUsuario = null;
-let areaUsuario = null;
-let cargoUsuario = null;
+let incidenciaManager = null;
+let areaManager = null;
+let categoriaManager = null;
+let sucursalManager = null;
+let regionManager = null;
+let userManager = null;
 
-// Mapeo de módulos a sus respectivas tarjetas y rutas (ACTUALIZADO)
-const MODULOS_CONFIG = {
-    // ========== MÓDULOS PRINCIPALES (grid superior) ==========
-    'areas': {
-        modulo: 'areas',
-        selector: '[data-modulo="areas"]',
-        url: '/usuarios/colaboradores/areas/areas.html',
-        titulo: 'Áreas',
-        descripcion: 'Gestionar áreas de la organización',
-        icono: 'fa-sitemap'
-    },
-    'categorias': {
-        modulo: 'categorias',
-        selector: '[data-modulo="categorias"]',
-        url: '/usuarios/colaboradores/categorias/categorias.html',
-        titulo: 'Categorías',
-        descripcion: 'Administrar categorías y subcategorías',
-        icono: 'fa-tags'
-    },
-    'sucursales': {
-        modulo: 'sucursales',
-        selector: '[data-modulo="sucursales"]',
-        url: '/usuarios/colaboradores/sucursales/sucursales.html',
-        titulo: 'Sucursales',
-        descripcion: 'Gestionar sucursales activas',
-        icono: 'fa-store'
-    },
-    'regiones': {
-        modulo: 'regiones',
-        selector: '[data-modulo="regiones"]',
-        url: '/usuarios/colaboradores/regiones/regiones.html',
-        titulo: 'Regiones',
-        descripcion: 'Administrar regiones geográficas',
-        icono: 'fa-map-marked-alt'
-    },
-    'incidencias': {
-        modulo: 'incidencias',
-        selector: '[data-modulo="incidencias"]',
-        url: '/usuarios/colaboradores/incidencias/incidencias.html',
-        titulo: 'Incidencias',
-        descripcion: 'Gestionar reportes de incidencias',
-        icono: 'fa-exclamation-triangle'
-    },
-    // NUEVOS MÓDULOS PRINCIPALES
-    'usuarios': {
-        modulo: 'usuarios',
-        selector: '[data-modulo="usuarios"]',
-        url: '/usuarios/colaboradores/usuarios/usuarios.html',
-        titulo: 'Usuarios',
-        descripcion: 'Gestionar usuarios del sistema',
-        icono: 'fa-users'
-    },
-    'estadisticas': {
-        modulo: 'estadisticas',
-        selector: '[data-modulo="estadisticas"]',
-        url: '/usuarios/colaboradores/estadisticas/estadisticas.html',
-        titulo: 'Estadísticas',
-        descripcion: 'Visualizar estadísticas y reportes',
-        icono: 'fa-chart-line'
-    },
-    'tareas': {
-        modulo: 'tareas',
-        selector: '[data-modulo="tareas"]',
-        url: '/usuarios/colaboradores/tareas/tareas.html',
-        titulo: 'Tareas',
-        descripcion: 'Gestionar tareas asignadas',
-        icono: 'fa-tasks'
-    },
-    'monitoreo': {
-        modulo: 'monitoreo',
-        selector: '[data-modulo="monitoreo"]',
-        url: '/usuarios/colaboradores/mapa/mapa.html',
-        titulo: 'Mapa de Alertas',
-        descripcion: 'Visualización de alertas en mapa',
-        icono: 'fa-map-marker-alt'
-    },
-
-    // ========== ACCIONES RÁPIDAS (sección izquierda) ==========
-    'registroAccesos': {
-        modulo: 'incidencias',
-        icono: 'fa-door-open',
-        seccion: '.side.left',
-        url: '/registro-accesos/',
-        titulo: 'Registro de Accesos',
-        descripcion: 'Registrar entradas y salidas'
-    },
-    'nuevaIncidencia': {
-        modulo: 'incidencias',
-        icono: 'fa-triangle-exclamation',
-        seccion: '.side.left',
-        url: '/incidencias/crear/',
-        titulo: 'Nueva Incidencia',
-        descripcion: 'Reportar una incidencia'
-    },
-    'nuevoUsuario': {
-        modulo: 'usuarios',
-        icono: 'fa-user-plus',
-        seccion: '.side.left',
-        url: '/usuarios/crear/',
-        titulo: 'Nuevo Usuario',
-        descripcion: 'Registrar nuevo usuario',
-        requiereAdmin: true
-    },
-    'nuevaTarea': {
-        modulo: 'tareas',
-        icono: 'fa-plus-circle',
-        seccion: '.side.left',
-        url: '/tareas/crear/',
-        titulo: 'Nueva Tarea',
-        descripcion: 'Crear nueva tarea'
-    },
-
-    // ========== ANÁLISIS Y REPORTES (sección derecha superior) ==========
-    'graficasIncidencias': {
-        modulo: 'incidencias',
-        icono: 'fa-chart-line',
-        seccion: '.side.right .section-container:first-child',
-        url: '/graficas/incidencias/',
-        titulo: 'Gráficas de Incidencias',
-        descripcion: 'Tendencias y análisis'
-    },
-    'mapaAlertas': {
-        modulo: 'monitoreo',
-        icono: 'fa-map-location-dot',
-        seccion: '.side.right .section-container:first-child',
-        url: '/mapa/',
-        titulo: 'Mapa de Alertas',
-        descripcion: 'Visualización geográfica'
-    },
-    'estadisticasGenerales': {
-        modulo: 'estadisticas',
-        icono: 'fa-chart-pie',
-        seccion: '.side.right .section-container:first-child',
-        url: '/estadisticas/',
-        titulo: 'Estadísticas',
-        descripcion: 'Métricas y KPIs del sistema'
-    },
-    'reporteTareas': {
-        modulo: 'tareas',
+// Configuración de KPIs con sus rutas de redirección
+const KPI_CONFIG = {
+    misIncidencias: {
+        modulo: 'misIncidencias',
+        titulo: 'INCIDENCIAS',
+        subtitulo: 'Creadas por mí',
         icono: 'fa-file-alt',
-        seccion: '.side.right .section-container:first-child',
-        url: '/tareas/reportes/',
-        titulo: 'Reporte de Tareas',
-        descripcion: 'Seguimiento y cumplimiento'
+        color: 'danger',
+        url: '/usuarios/colaboradores/incidencias/incidencias.html'
     },
-
-    // ========== ADMINISTRACIÓN (sección derecha inferior) ==========
-    'tiposIncidencia': {
+    areas: {
+        modulo: 'areas',
+        titulo: 'ÁREAS',
+        subtitulo: 'Registradas',
+        icono: 'fa-solid fa-layer-group',
+        color: '#b16bff',
+        url: '/usuarios/colaboradores/areas/areas.html'
+    },
+    categorias: {
         modulo: 'categorias',
-        icono: 'fa-list-check',
-        seccion: '.side.right .section-container:last-child',
-        url: '/categorias/',
-        titulo: 'Tipos de Incidencia',
-        descripcion: 'Gestionar categorías'
+        titulo: 'CATEGORÍAS',
+        subtitulo: 'Registradas',
+        icono: 'fa-tags',
+        color: 'purple',
+        url: '/usuarios/colaboradores/categorias/categorias.html'
     },
-    'rolesPermisos': {
-        modulo: 'permisos',
-        icono: 'fa-user-gear',
-        seccion: '.side.right .section-container:last-child',
-        url: '/permisos/',
-        titulo: 'Roles y Permisos',
-        descripcion: 'Control de accesos',
-        requiereAdmin: true
+    sucursales: {
+        modulo: 'sucursales',
+        titulo: 'SUCURSALES',
+        subtitulo: 'Activas',
+        icono: 'fa-solid fa-building',
+        color: 'yellow',
+        url: '/usuarios/colaboradores/sucursales/sucursales.html'
     },
-    'backup': {
-        modulo: 'admin',
-        icono: 'fa-database',
-        seccion: '.side.right .section-container:last-child',
-        url: '/backup/',
-        titulo: 'Backup del Sistema',
-        descripcion: 'Respaldo de datos',
-        requiereAdmin: true
+    regiones: {
+        modulo: 'regiones',
+        titulo: 'REGIONES',
+        subtitulo: 'Registradas',
+        icono: 'fa-map-marked-alt',
+        color: 'purple',
+        url: '/usuarios/colaboradores/regiones/regiones.html'
     },
-    'configuracion': {
-        modulo: 'admin',
-        icono: 'fa-sliders',
-        seccion: '.side.right .section-container:last-child',
-        url: '/configuracion/',
-        titulo: 'Configuración General',
-        descripcion: 'Ajustes del sistema',
-        requiereAdmin: true
+    colaboradores: {
+        modulo: 'usuarios',
+        titulo: 'COLABORADORES',
+        subtitulo: 'Resgistrados',
+        icono: 'fa-users',
+        color: 'cyan',
+        url: '/usuarios/colaboradores/usuarios/usuarios.html'
     }
 };
+
+// Configuración de ACCESO RÁPIDO
+const ACCESO_RAPIDO_CONFIG = [
+    {
+        id: 'nuevaIncidencia',
+        titulo: 'Nueva Incidencia',
+        descripcion: 'Crear nuevo reporte',
+        icono: 'fa-triangle-exclamation',
+        color: 'danger',
+        url: '/usuarios/colaboradores/crearIncidencias/crearIncidencias.html',
+        permiso: 'incidencias',
+        brillo: true,
+        animacion: true
+    },
+    {
+        id: 'incidenciasLista',
+        titulo: 'Incidencias',
+        descripcion: 'Ver lista de incidencias',
+        icono: 'fa-list',
+        color: 'orange',
+        url: '/usuarios/colaboradores/incidencias/incidencias.html',
+        permiso: 'incidencias',
+        brillo: false
+    },
+    {
+        id: 'mapaAlertas',
+        titulo: 'Mapa de Alertas',
+        descripcion: 'Monitoreo en tiempo real',
+        icono: 'fa-map-marker-alt',
+        color: 'cyan',
+        url: '/usuarios/colaboradores/mapaAlertas/mapaAlertas.html',
+        permiso: 'monitoreo',
+        brillo: false
+    },
+    {
+        id: 'loginMonitoreo',
+        titulo: 'Gestión de Paneles',
+        descripcion: 'Manejo de Paneles',
+        icono: 'fas fa-server',
+        color: 'orange',
+        url: '/usuarios/colaboradores/loginMonitoreo/loginMonitoreo.html',
+        permiso: 'loginMonitoreo',
+        brillo: false
+    },
+    {
+        id: 'monitoreo',
+        titulo: 'Monitoreo',
+        descripcion: 'Monitoreo de Paneles',
+        icono: 'fa-solid fa-dashboard',
+        color: 'orange',
+        url: '/usuarios/colaboradores/monitoreo/monitoreo.html',
+        permiso: 'monitoreo',
+        brillo: false
+    }
+];
+
+// Configuración de módulos agrupados por columnas
+const COLUMNAS_CONFIG = [
+    {
+        titulo: 'SECCION DE RECUPERACIONES',
+        icono: 'fa-box-open',
+        color: '#ff8c00',
+        permisos: ['incidenciasRecuperacion', 'incidencias'],
+        tarjetas: [
+            {
+                modulo: 'incidenciasRecuperacionLista',
+                titulo: 'Lista de recuperaciones',
+                descripcion: 'Ver todos los registros de mercancía perdida',
+                icono: 'fa-list',
+                color: 'orange',
+                url: '/usuarios/colaboradores/incidenciasRecuperacion/incidenciasRecuperacion.html',
+                permisoEspecifico: 'incidenciasRecuperacion'
+            },
+            {
+                modulo: 'crearIncidenciasRecuperacion',
+                titulo: 'Crear recuperación',
+                descripcion: 'Registrar nueva mercancía perdida',
+                icono: 'fa-plus-circle',
+                color: 'orange',
+                url: '/usuarios/colaboradores/crearIncidenciasRecuperacion/crearIncidenciasRecuperacion.html',
+                permisoEspecifico: 'crearIncidenciasRecuperacion'
+            }
+        ]
+    },
+    {
+        titulo: 'ÁREAS',
+        icono: 'fa-layer-group',
+        color: '#b16bff',
+        permisos: ['areas'],
+        tarjetas: [
+            { modulo: 'areasLista', titulo: 'Lista Áreas', descripcion: 'Ver todas las áreas', icono: 'fa-list', color: 'purple', url: '/usuarios/colaboradores/areas/areas.html' },
+            { modulo: 'areasNueva', titulo: 'Nueva Área', descripcion: 'Crear nueva área', icono: 'fa-plus-circle', color: 'purple', url: '/usuarios/colaboradores/crearAreas/crearAreas.html' }
+        ]
+    },
+    {
+        titulo: 'SUCURSALES',
+        icono: 'fa-building',
+        color: '#00cfff',
+        permisos: ['sucursales'],
+        tarjetas: [
+            { modulo: 'sucursalesLista', titulo: 'Lista Sucursales', descripcion: 'Ver todas las sucursales', icono: 'fa-list', color: 'cyan', url: '/usuarios/colaboradores/sucursales/sucursales.html' },
+            { modulo: 'sucursalesNueva', titulo: 'Nueva Sucursal', descripcion: 'Crear nueva sucursal', icono: 'fa-plus-circle', color: 'cyan', url: '/usuarios/colaboradores/crearSucursales/crearSucursales.html' }
+        ]
+    },
+    {
+        titulo: 'REGIONES',
+        icono: 'fa-map',
+        color: '#2f8cff',
+        permisos: ['regiones'],
+        tarjetas: [
+            { modulo: 'regionesLista', titulo: 'Lista Regiones', descripcion: 'Ver todas las regiones', icono: 'fa-list', color: 'blue', url: '/usuarios/colaboradores/regiones/regiones.html' },
+            { modulo: 'regionesNueva', titulo: 'Nueva Región', descripcion: 'Crear nueva región', icono: 'fa-plus-circle', color: 'blue', url: '/usuarios/colaboradores/crearRegiones/crearRegiones.html' }
+        ]
+    },
+    {
+        titulo: 'CATEGORÍAS',
+        icono: 'fa-tags',
+        color: '#188d27',
+        permisos: ['categorias'],
+        tarjetas: [
+            { modulo: 'categoriasLista', titulo: 'Lista Categorías', descripcion: 'Ver todas las categorías', icono: 'fa-list', color: 'green', url: '/usuarios/colaboradores/categorias/categorias.html' },
+            { modulo: 'categoriasNueva', titulo: 'Nueva Categoría', descripcion: 'Crear nueva categoría', icono: 'fa-plus-circle', color: 'green', url: '/usuarios/colaboradores/crearCategorias/crearCategorias.html' }
+        ]
+    },
+    {
+        titulo: 'PANEL DE USUARIOS',
+        icono: 'fa-users',
+        color: '#9caba4',
+        permisos: ['usuarios'],
+        tarjetas: [
+            { modulo: 'usuariosLista', titulo: 'Lista Usuarios', descripcion: 'Ver todos los usuarios', icono: 'fa-list', color: '#9caba4', url: '/usuarios/colaboradores/usuarios/usuarios.html' },
+            { modulo: 'usuariosNuevo', titulo: 'Nuevo Usuario', descripcion: 'Crear nuevo usuario', icono: 'fa-plus-circle', color: '#9caba4', url: '/usuarios/colaboradores/crearUsuarios/crearUsuarios.html' }
+        ]
+    },
+    {
+        titulo: 'ESTADÍSTICAS',
+        icono: 'fa-solid fa-chart-pie',
+        color: '#ffcc00',
+        permisos: ['estadisticas'],
+        tarjetas: [
+            { modulo: 'estadisticasVer', titulo: 'Ver Estadísticas', descripcion: 'Visualizar reportes y gráficas', icono: 'fa-chart-simple', color: '#ffcc00', url: '/usuarios/colaboradores/estadisticas/estadisticas.html' },
+            { modulo: 'reportes', titulo: 'Reportes', descripcion: 'Generar reportes personalizados', icono: 'fa-file-alt', color: 'purple', url: '/usuarios/colaboradores/reportes/reportes.html' }
+        ]
+    },
+    {
+        titulo: 'TAREAS',
+        icono: 'fa-tasks',
+        color: '#00cfff',
+        permisos: ['tareas'],
+        tarjetas: [
+            { modulo: 'tareasLista', titulo: 'Mis Tareas', descripcion: 'Ver tareas asignadas', icono: 'fa-solid fa-check-circle', color: '#00cfff', url: '/usuarios/colaboradores/tareas/tareas.html' }
+        ]
+    },
+    {
+        titulo: 'MONITOREO',
+        icono: 'fa-map-marker-alt',
+        color: '#ff4d00',
+        permisos: ['monitoreo'],
+        tarjetas: [
+            { modulo: 'mapaAlertas', titulo: 'Mapa de Alertas', descripcion: 'Visualización en tiempo real', icono: 'fa-map', color: 'danger', url: '/usuarios/colaboradores/mapaAlertas/mapaAlertas.html' },
+        ]
+    },
+    {
+        titulo: 'PERMISOS',
+        icono: 'fa-lock',
+        color: '#ff4d00',
+        permisos: ['permisos'],
+        tarjetas: [
+            { modulo: 'permisosLista', titulo: 'Configurar Permisos', descripcion: 'Gestionar permisos por cargo', icono: 'fa-solid fa-gear', color: 'danger', url: '/usuarios/colaboradores/permisos/permisos.html' }
+        ]
+    }
+];
 
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function () {
     try {
-        console.log('🚀 Iniciando panel de control...');
-
-        // Mostrar estado de carga
-        mostrarEstadoCarga();
-
-        // Cargar usuario desde localStorage
-        const usuarioCargado = cargarUsuarioDesdeStorage();
-
-        if (!usuarioCargado) {
-            console.error('❌ No hay usuario autenticado');
+        cargarUsuarioDesdeStorage();      
+        
+        if (!usuarioActual || !usuarioActual.id) {
             mostrarErrorSesion();
             return;
         }
 
-        console.log('✅ Usuario cargado:', usuarioActual);
-
-        // Importar clases necesarias
         try {
             const { PermisoManager } = await import('/clases/permiso.js');
             permisoManager = new PermisoManager();
-
-            // Establecer la organización del usuario en el permisoManager
             if (usuarioActual.organizacionCamelCase) {
                 permisoManager.organizacionCamelCase = usuarioActual.organizacionCamelCase;
             }
         } catch (error) {
-            console.warn('⚠️ Error importando PermisoManager:', error);
+            console.warn('Error cargando PermisoManager:', error);
         }
 
-        // Obtener permisos del usuario según su área y cargo
+        // Inicializar los managers usando tus clases
+        const { IncidenciaManager } = await import('/clases/incidencia.js');
+        const { AreaManager } = await import('/clases/area.js');
+        const { CategoriaManager } = await import('/clases/categoria.js');
+        const { SucursalManager } = await import('/clases/sucursal.js');
+        const { RegionManager } = await import('/clases/region.js');
+        const { UserManager } = await import('/clases/user.js');
+        
+        incidenciaManager = new IncidenciaManager();
+        areaManager = new AreaManager();
+        categoriaManager = new CategoriaManager();
+        sucursalManager = new SucursalManager();
+        regionManager = new RegionManager();
+        userManager = new UserManager();
+
         await obtenerPermisosUsuario();
 
-        // Filtrar tarjetas según permisos
-        filtrarTarjetasPorPermisos();
+        const tieneAlgunPermiso = Object.values(permisosUsuario).some(valor => valor === true);
 
-        // Configurar eventos de las tarjetas
+        if (!tieneAlgunPermiso) {
+            mostrarSinPermisos();
+            return;
+        }
+
+        renderizarKPIs();
+        renderizarAccesoRapido();
+        renderizarColumnas();
         configurarEventosTarjetas();
-
-        // Cargar datos de KPI
-        await cargarDatosKPI();
-
-        // Ocultar estado de carga
-        ocultarEstadoCarga();
-
-        // Mostrar resumen de permisos en consola
-        mostrarResumenPermisos();
+        configurarEventosKPIs();
+        await cargarDatosKPIs();
 
     } catch (error) {
-        console.error('❌ Error inicializando panel:', error);
-        ocultarEstadoCarga();
+        console.error('Error en inicialización:', error);
         mostrarError(error.message);
     }
 });
 
-// ========== CARGAR USUARIO DESDE LOCALSTORAGE ==========
 function cargarUsuarioDesdeStorage() {
     try {
-        console.log('🔍 Verificando localStorage...');
-
-        // Intentar obtener de userData (para colaboradores)
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-
         if (userData && Object.keys(userData).length > 0) {
             usuarioActual = {
                 id: userData.id || userData.uid || 'usuario',
@@ -265,393 +303,404 @@ function cargarUsuarioDesdeStorage() {
                 correo: userData.correoElectronico || userData.correo || '',
                 organizacion: userData.organizacion || 'Mi Organización',
                 organizacionCamelCase: userData.organizacionCamelCase || '',
-                areaId: userData.areaAsignadaId || '',
+                areaId: userData.areaAsignadaId || userData.areaId || '',
+                areaNombre: userData.areaAsignadaNombre || userData.areaNombre || '',
                 cargoId: userData.cargoId || '',
+                cargoNombre: userData.cargoNombre || '',
                 rol: userData.rol || 'colaborador'
             };
-
-            console.log('✅ Usuario cargado desde userData:', {
-                nombre: usuarioActual.nombreCompleto,
-                areaAsignadaId: usuarioActual.areaId,
-                cargoId: usuarioActual.cargoId,
-                rol: usuarioActual.rol
-            });
-
-            if (!usuarioActual.areaId) {
-                console.warn('⚠️ El usuario NO tiene área asignada');
-            }
-            if (!usuarioActual.cargoId) {
-                console.warn('⚠️ El usuario NO tiene cargo asignado');
-            }
-
             return true;
         }
-
-        // Fallback a adminInfo
-        const adminInfo = localStorage.getItem('adminInfo');
-        if (adminInfo) {
-            const adminData = JSON.parse(adminInfo);
-            usuarioActual = {
-                id: adminData.id || adminData.uid,
-                uid: adminData.uid || adminData.id,
-                nombreCompleto: adminData.nombreCompleto || 'Administrador',
-                correo: adminData.correoElectronico || '',
-                organizacion: adminData.organizacion || 'Mi Organización',
-                organizacionCamelCase: adminData.organizacionCamelCase || '',
-                areaId: adminData.areaAsignadaId || '',
-                cargoId: adminData.cargoId || '',
-                rol: adminData.rol || 'administrador'
-            };
-            console.log('✅ Usuario cargado desde adminInfo');
-            return true;
-        }
-
-        console.warn('⚠️ No hay datos de usuario en localStorage');
         return false;
-
     } catch (error) {
-        console.error('❌ Error cargando usuario:', error);
+        console.error('Error cargando usuario:', error);
         return false;
     }
 }
 
-// ========== OBTENER PERMISOS DEL USUARIO ==========
 async function obtenerPermisosUsuario() {
     try {
-        // Administrador o master tienen todos los permisos
         if (usuarioActual.rol === 'administrador' || usuarioActual.rol === 'master') {
-            console.log('👑 Usuario administrador - todos los permisos');
             permisosUsuario = {
-                areas: true,
-                categorias: true,
-                sucursales: true,
-                regiones: true,
-                incidencias: true,
-                // NUEVOS PERMISOS
-                usuarios: true,
-                estadisticas: true,
-                tareas: true,
-                monitoreo: true,
-                permisos: true,
-                admin: true
+                areas: true, categorias: true, sucursales: true, regiones: true,
+                incidencias: true, usuarios: true, estadisticas: true, tareas: true,
+                monitoreo: true, permisos: true, loginMonitoreo: true, admin: true,
+                incidenciasRecuperacion: true,
+                crearIncidenciasRecuperacion: true,
+                estadisticasIncidenciasRecuperacion: true
             };
             return;
         }
 
-        // Verificar si el usuario tiene área y cargo
         if (!usuarioActual.areaId || !usuarioActual.cargoId) {
-            console.log('ℹ️ Usuario sin área/cargo - permisos por defecto');
             permisosUsuario = {
-                areas: false,
-                categorias: false,
-                sucursales: false,
-                regiones: false,
-                incidencias: true,
-                usuarios: false,
-                estadisticas: false,
-                tareas: false,
-                monitoreo: false,
-                permisos: false,
-                admin: false
+                areas: false, categorias: false, sucursales: false, regiones: false,
+                incidencias: true, usuarios: false, estadisticas: false, tareas: false,
+                monitoreo: false, permisos: false, loginMonitoreo: false, admin: false,
+                incidenciasRecuperacion: false,
+                crearIncidenciasRecuperacion: false,
+                estadisticasIncidenciasRecuperacion: false
             };
             return;
         }
 
-        // Buscar permiso en Firebase
         if (permisoManager) {
             const permiso = await permisoManager.obtenerPorCargoYArea(
-                usuarioActual.cargoId,
-                usuarioActual.areaId,
-                usuarioActual.organizacionCamelCase
+                usuarioActual.cargoId, usuarioActual.areaId, usuarioActual.organizacionCamelCase
             );
-
             if (permiso) {
+                const tieneIncidencias = permiso.puedeAcceder('incidencias');
+
                 permisosUsuario = {
                     areas: permiso.puedeAcceder('areas'),
                     categorias: permiso.puedeAcceder('categorias'),
                     sucursales: permiso.puedeAcceder('sucursales'),
                     regiones: permiso.puedeAcceder('regiones'),
-                    incidencias: permiso.puedeAcceder('incidencias'),
-                    // NUEVOS PERMISOS
+                    incidencias: tieneIncidencias,
                     usuarios: permiso.puedeAcceder('usuarios'),
                     estadisticas: permiso.puedeAcceder('estadisticas'),
                     tareas: permiso.puedeAcceder('tareas'),
                     monitoreo: permiso.puedeAcceder('monitoreo'),
-                    permisos: false,
-                    admin: false
+                    permisos: permiso.puedeAcceder('permisos'),
+                    loginMonitoreo: permiso.puedeAcceder('loginMonitoreo'),
+                    admin: false,
+                    incidenciasRecuperacion: permiso.puedeAcceder('incidenciasRecuperacion') || tieneIncidencias,
+                    crearIncidenciasRecuperacion: permiso.puedeAcceder('crearIncidenciasRecuperacion') || tieneIncidencias,
+                    estadisticasIncidenciasRecuperacion: permiso.puedeAcceder('estadisticasIncidenciasRecuperacion') || tieneIncidencias
                 };
-                console.log('✅ Permisos encontrados:', permisosUsuario);
                 return;
             }
         }
 
-        // Permisos por defecto
-        console.log('ℹ️ Usando permisos por defecto');
         permisosUsuario = {
-            areas: false,
-            categorias: false,
-            sucursales: false,
-            regiones: false,
-            incidencias: true,
-            usuarios: false,
-            estadisticas: false,
-            tareas: false,
-            monitoreo: false,
-            permisos: false,
-            admin: false
+            areas: false, categorias: false, sucursales: false, regiones: false,
+            incidencias: true, usuarios: false, estadisticas: false, tareas: false,
+            monitoreo: false, permisos: false, loginMonitoreo: false, admin: false,
+            incidenciasRecuperacion: false,
+            crearIncidenciasRecuperacion: false,
+            estadisticasIncidenciasRecuperacion: false
         };
-
     } catch (error) {
-        console.error('Error en obtenerPermisosUsuario:', error);
+        console.error('Error obteniendo permisos:', error);
         permisosUsuario = {
-            areas: false,
-            categorias: false,
-            sucursales: false,
-            regiones: false,
-            incidencias: true,
-            usuarios: false,
-            estadisticas: false,
-            tareas: false,
-            monitoreo: false,
-            permisos: false,
-            admin: false
+            areas: false, categorias: false, sucursales: false, regiones: false,
+            incidencias: true, usuarios: false, estadisticas: false, tareas: false,
+            monitoreo: false, permisos: false, loginMonitoreo: false, admin: false,
+            incidenciasRecuperacion: false,
+            crearIncidenciasRecuperacion: false,
+            estadisticasIncidenciasRecuperacion: false
         };
     }
 }
 
-// ========== FILTRAR TARJETAS POR PERMISOS ==========
-function filtrarTarjetasPorPermisos() {
-    if (!permisosUsuario) {
-        console.warn('No hay permisos - ocultando todo');
+function mostrarSinPermisos() {
+    const container = document.querySelector('.right-layout');
+    if (container) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 80px 20px;">
+                <p style="color: #ffaa88; font-size: 1.2rem;">No tienes permisos habilitados por el administrador</p>
+            </div>
+        `;
+    }
+}
+
+function renderizarKPIs() {
+    const container = document.getElementById('kpi-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const kpisAMostrar = [];
+
+    if (permisosUsuario.incidencias) kpisAMostrar.push('misIncidencias');
+    if (permisosUsuario.areas) kpisAMostrar.push('areas');
+    if (permisosUsuario.categorias) kpisAMostrar.push('categorias');
+    if (permisosUsuario.sucursales) kpisAMostrar.push('sucursales');
+    if (permisosUsuario.regiones) kpisAMostrar.push('regiones');
+    if (permisosUsuario.usuarios) kpisAMostrar.push('colaboradores');
+
+    if (kpisAMostrar.length === 0) {
+        container.innerHTML = `<div class="kpi-card" style="grid-column: 1/-1; text-align: center;">
+            <i class="fa-solid fa-info-circle" style="font-size: 2rem;"></i>
+            <p>No hay módulos disponibles con tus permisos</p>
+        </div>`;
         return;
     }
 
-    console.log('🎯 Aplicando filtros de permisos...');
+    for (const kpiKey of kpisAMostrar) {
+        const config = KPI_CONFIG[kpiKey];
+        const card = document.createElement('div');
+        card.className = 'kpi-card';
+        card.style.cursor = 'pointer';
+        card.style.transition = 'all 0.3s ease';
 
-    let tarjetasVisibles = 0;
-    let modulosVisibles = [];
+        if (config.color === 'danger') {
+            card.classList.add('danger');
+            card.id = 'kpi-mis-incidencias';
+        }
 
-    Object.entries(MODULOS_CONFIG).forEach(([key, config]) => {
-        let tarjeta = null;
+        card.setAttribute('data-url', config.url);
+        card.setAttribute('data-modulo', config.modulo);
+        card.setAttribute('data-titulo', config.titulo);
 
-        // Buscar la tarjeta por selector o icono
-        if (config.selector) {
-            tarjeta = document.querySelector(config.selector);
-        } else if (config.icono) {
-            const icono = document.querySelector(`.${config.icono}`);
-            if (icono) {
-                tarjeta = icono.closest('.dashboard-card');
+        card.innerHTML = `
+            <i class="fa-solid ${config.icono}" style="color: var(--color-icon-${config.color});"></i>
+            <span class="kpi-number" id="kpi-number-${config.modulo}">0</span>
+            <h3>${config.titulo}</h3>
+            <p>${config.subtitulo}</p>
+        `;
+        container.appendChild(card);
+    }
+}
+
+function configurarEventosKPIs() {
+    const kpis = document.querySelectorAll('.kpi-card');
+    kpis.forEach(kpi => {
+        kpi.addEventListener('mouseenter', () => {
+            kpi.style.transform = 'translateY(-4px)';
+            kpi.style.boxShadow = '0 0 20px rgba(255, 77, 0, 0.4)';
+        });
+
+        kpi.addEventListener('mouseleave', () => {
+            kpi.style.transform = 'translateY(0)';
+            kpi.style.boxShadow = '';
+        });
+
+        kpi.addEventListener('click', (e) => {
+            e.preventDefault();
+            const url = kpi.dataset.url;
+            const titulo = kpi.dataset.titulo;
+
+            if (url) {
+                window.location.href = url;
+            } else {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Módulo en construcción',
+                    text: `La vista de ${titulo} estará disponible pronto.`,
+                    background: '#1a1a1a',
+                    color: '#fff',
+                    confirmButtonColor: '#ff4d00'
+                });
             }
-        }
-
-        // Búsqueda alternativa
-        if (!tarjeta && config.icono) {
-            const icono = document.querySelector(`.${config.icono}`);
-            if (icono) {
-                tarjeta = icono.closest('.dashboard-card');
-            }
-        }
-
-        if (!tarjeta) {
-            return;
-        }
-
-        const debeMostrarse = verificarPermisoModulo(config);
-
-        if (debeMostrarse) {
-            tarjeta.style.display = 'flex';
-            tarjetasVisibles++;
-            modulosVisibles.push(config.titulo);
-            tarjeta.dataset.url = config.url;
-            tarjeta.dataset.titulo = config.titulo;
-            tarjeta.dataset.modulo = config.modulo;
-            if (config.requiereAdmin) {
-                tarjeta.dataset.requiereAdmin = 'true';
-            }
-        } else {
-            tarjeta.style.display = 'none';
-        }
+        });
     });
-
-    console.log(`📊 Total tarjetas visibles: ${tarjetasVisibles}`);
-    if (modulosVisibles.length > 0) {
-        console.log('📋 Módulos visibles:', modulosVisibles.join(', '));
-    }
-
-    verificarSeccionesVacias();
 }
 
-// ========== VERIFICAR PERMISO DE MÓDULO ==========
-function verificarPermisoModulo(config) {
-    // Admin ve todo
-    if (usuarioActual.rol === 'administrador' || usuarioActual.rol === 'master') {
-        return true;
-    }
+function renderizarAccesoRapido() {
+    const container = document.getElementById('acceso-rapido-container');
+    if (!container) return;
+    container.innerHTML = '';
 
-    // Si requiere admin y no es admin
-    if (config.requiereAdmin) {
-        return false;
-    }
+    for (const item of ACCESO_RAPIDO_CONFIG) {
+        const tienePermiso = permisosUsuario[item.permiso] === true;
+        if (!tienePermiso) continue;
 
-    // Verificar permiso específico
-    if (config.modulo && permisosUsuario) {
-        return permisosUsuario[config.modulo] === true;
-    }
+        const card = document.createElement('div');
+        card.className = 'dashboard-card';
+        if (item.animacion) {
+            card.id = 'card-nueva-incidencia';
+        }
+        card.setAttribute('data-url', item.url);
+        card.setAttribute('data-titulo', item.titulo);
 
-    return false;
+        if (item.animacion) {
+            card.style.border = '1px solid #ff4d00';
+            card.style.animation = 'parpadeo 1.5s ease-in-out infinite';
+        }
+
+        card.innerHTML = `
+            <div class="card-icon ${item.color}" style="${item.animacion ? 'animation: brilloIcono 1.5s ease-in-out infinite;' : ''}">
+                <i class="fa-solid ${item.icono}"></i>
+            </div>
+            <div class="card-text">
+                <h3 style="${item.animacion ? 'animation: brilloIcono 1.5s ease-in-out infinite;' : ''}">${item.titulo}</h3>
+                <p>${item.descripcion}</p>
+            </div>
+            <div class="card-arrow">→</div>
+        `;
+        container.appendChild(card);
+    }
 }
 
-// ========== VERIFICAR SECCIONES VACÍAS ==========
-function verificarSeccionesVacias() {
-    // Módulos Principales
-    const modulosPrincipales = document.querySelector('.modulos-principales');
-    if (modulosPrincipales) {
-        const tarjetasVisibles = modulosPrincipales.querySelectorAll('.dashboard-card[style*="display: flex"]');
-        if (tarjetasVisibles.length === 0) {
-            modulosPrincipales.style.display = 'none';
-        } else {
-            modulosPrincipales.style.display = 'block';
+function renderizarColumnas() {
+    const container = document.getElementById('modulos-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    for (const columna of COLUMNAS_CONFIG) {
+        const tieneAlgunPermiso = columna.permisos.some(p => permisosUsuario[p] === true);
+        if (!tieneAlgunPermiso) continue;
+
+        const columnaDiv = document.createElement('div');
+        columnaDiv.className = 'modulo-columna';
+
+        columnaDiv.innerHTML = `
+            <div class="modulo-header">
+                <i class="fa-solid ${columna.icono}" style="color: ${columna.color};"></i>
+                <h3>${columna.titulo}</h3>
+            </div>
+            <div class="modulo-tarjetas" id="tarjetas-${columna.titulo.replace(/\s/g, '')}">
+            </div>
+        `;
+
+        container.appendChild(columnaDiv);
+
+        const tarjetasContainer = columnaDiv.querySelector('.modulo-tarjetas');
+
+        for (const tarjeta of columna.tarjetas) {
+            let tienePermiso = false;
+
+            if (tarjeta.permisoEspecifico) {
+                tienePermiso = permisosUsuario[tarjeta.permisoEspecifico] === true;
+            } else if (tarjeta.modulo) {
+                let moduloBase = tarjeta.modulo
+                    .replace('Lista', '')
+                    .replace('Nueva', '')
+                    .replace('Nuevo', '')
+                    .replace('Ver', '')
+                    .toLowerCase();
+
+                const moduloMap = {
+                    'areas': 'areas',
+                    'categorias': 'categorias',
+                    'sucursales': 'sucursales',
+                    'regiones': 'regiones',
+                    'usuarios': 'usuarios',
+                    'estadisticas': 'estadisticas',
+                    'tareas': 'tareas',
+                    'monitoreo': 'monitoreo',
+                    'mapa': 'monitoreo',
+                    'tablero': 'monitoreo',
+                    'permisos': 'permisos',
+                    'incidenciasrecuperacion': 'incidenciasRecuperacion',
+                    'crearincidenciasrecuperacion': 'crearIncidenciasRecuperacion',
+                    'estadisticasincidenciasrecuperacion': 'estadisticasIncidenciasRecuperacion'
+                };
+
+                const moduloKey = moduloMap[moduloBase] || moduloBase;
+                tienePermiso = permisosUsuario[moduloKey] === true;
+            } else {
+                tienePermiso = true;
+            }
+
+            if (!tienePermiso) continue;
+
+            const card = document.createElement('div');
+            card.className = 'dashboard-card';
+            card.setAttribute('data-url', tarjeta.url);
+            card.setAttribute('data-titulo', tarjeta.titulo);
+            card.innerHTML = `
+                <div class="card-icon ${tarjeta.color}">
+                    <i class="fa-solid ${tarjeta.icono}"></i>
+                </div>
+                <div class="card-text">
+                    <h3>${tarjeta.titulo}</h3>
+                    <p>${tarjeta.descripcion}</p>
+                </div>
+                <div class="card-arrow">→</div>
+            `;
+            tarjetasContainer.appendChild(card);
+        }
+
+        if (tarjetasContainer.children.length === 0) {
+            columnaDiv.style.display = 'none';
         }
     }
-
-    // Sección izquierda
-    const sideLeft = document.querySelector('.side.left');
-    if (sideLeft) {
-        const secciones = sideLeft.querySelectorAll('.section-container');
-        secciones.forEach(seccion => {
-            const tarjetasVisibles = seccion.querySelectorAll('.dashboard-card[style*="display: flex"]');
-            if (tarjetasVisibles.length === 0) {
-                seccion.style.display = 'none';
-            } else {
-                seccion.style.display = 'block';
-            }
-        });
-    }
-
-    // Sección derecha
-    const sideRight = document.querySelector('.side.right');
-    if (sideRight) {
-        const secciones = sideRight.querySelectorAll('.section-container');
-        secciones.forEach(seccion => {
-            const tarjetasVisibles = seccion.querySelectorAll('.dashboard-card[style*="display: flex"]');
-            if (tarjetasVisibles.length === 0) {
-                seccion.style.display = 'none';
-            } else {
-                seccion.style.display = 'block';
-            }
-        });
-    }
 }
 
-// ========== CARGAR DATOS DE KPI ==========
-async function cargarDatosKPI() {
-    // Aquí iría la lógica para cargar datos reales
-    // Por ahora, valores de ejemplo
-    const kpiIncidencias = document.getElementById('kpi-incidencias-pendientes');
-    const kpiUsuarios = document.getElementById('kpi-usuarios-activos');
-    const kpiSucursales = document.getElementById('kpi-sucursales-activas');
-    const kpiEficiencia = document.getElementById('kpi-eficiencia');
-
-    if (kpiIncidencias) kpiIncidencias.textContent = '12';
-    if (kpiUsuarios) kpiUsuarios.textContent = '8';
-    if (kpiSucursales) kpiSucursales.textContent = '5';
-    if (kpiEficiencia) kpiEficiencia.textContent = '94%';
-}
-
-// ========== MOSTRAR RESUMEN DE PERMISOS ==========
-function mostrarResumenPermisos() {
-    console.log('='.repeat(50));
-    console.log('📋 RESUMEN DE PERMISOS');
-    console.log('='.repeat(50));
-    console.log(`👤 Usuario: ${usuarioActual.nombreCompleto}`);
-    console.log(`🏢 Organización: ${usuarioActual.organizacion}`);
-    console.log(`📌 Área: ${usuarioActual.areaId || 'No asignada'}`);
-    console.log(`👔 Cargo: ${usuarioActual.cargoId || 'No asignado'}`);
-    console.log(`👑 Rol: ${usuarioActual.rol}`);
-    console.log('-'.repeat(50));
-    console.log('🔑 Permisos:');
-    if (permisosUsuario) {
-        Object.entries(permisosUsuario).forEach(([modulo, tiene]) => {
-            if (tiene) console.log(`   ✅ ${modulo}`);
-        });
-    }
-    console.log('='.repeat(50));
-}
-
-// ========== CONFIGURAR EVENTOS DE TARJETAS ==========
 function configurarEventosTarjetas() {
     const tarjetas = document.querySelectorAll('.dashboard-card');
-
     tarjetas.forEach(tarjeta => {
         tarjeta.addEventListener('click', (e) => {
             e.preventDefault();
-
             const url = tarjeta.dataset.url;
-            const titulo = tarjeta.dataset.titulo;
-            const modulo = tarjeta.dataset.modulo;
-
-            if (url) {
-                const config = {
-                    modulo: modulo,
-                    requiereAdmin: tarjeta.dataset.requiereAdmin === 'true'
-                };
-
-                if (verificarPermisoModulo(config)) {
-                    console.log(`➡️ Navegando a: ${titulo}`);
-                    window.location.href = url;
-                } else {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Acceso Denegado',
-                        text: `No tienes permisos para acceder a ${titulo}`,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                }
-            }
+            if (url) window.location.href = url;
         });
     });
 }
 
-// ========== ESTADOS DE CARGA Y ERROR ==========
-function mostrarEstadoCarga() {
-    if (!document.getElementById('loading-overlay')) {
-        const overlay = document.createElement('div');
-        overlay.id = 'loading-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            backdrop-filter: blur(5px);
-        `;
-        overlay.innerHTML = `
-            <div style="text-align: center;">
-                <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #c0c0c0; margin-bottom: 16px;"></i>
-                <h3 style="color: white; font-family: 'Orbitron', sans-serif;">CARGANDO PANEL</h3>
-                <p style="color: #a5a5a5;">Verificando permisos...</p>
-            </div>
-        `;
-        document.body.appendChild(overlay);
+// ========== CARGA DE DATOS KPIs USANDO SOLO LAS CLASES ==========
+async function cargarDatosKPIs() {
+    const organizacion = usuarioActual.organizacionCamelCase;
+    if (!organizacion) return;
+
+    // Usando el método de IncidenciaManager para contar incidencias del usuario
+    if (permisosUsuario.incidencias && incidenciaManager) {
+        await cargarMisIncidencias(organizacion, usuarioActual.id);
+    }
+    
+    // Usando AreaManager para contar áreas
+    if (permisosUsuario.areas && areaManager) {
+        await cargarConteoDesdeManager(areaManager, 'getAreasByOrganizacion', organizacion, 'areas');
+    }
+    
+    // Usando CategoriaManager para contar categorías
+    if (permisosUsuario.categorias && categoriaManager) {
+        await cargarConteoDesdeManager(categoriaManager, 'obtenerCategoriasPorOrganizacion', organizacion, 'categorias');
+    }
+    
+    // Usando SucursalManager para contar sucursales
+    if (permisosUsuario.sucursales && sucursalManager) {
+        await cargarConteoDesdeManager(sucursalManager, 'getSucursalesByOrganizacion', organizacion, 'sucursales');
+    }
+    
+    // Usando RegionManager para contar regiones
+    if (permisosUsuario.regiones && regionManager) {
+        await cargarConteoDesdeManager(regionManager, 'getRegionesByOrganizacion', organizacion, 'regiones');
+    }
+    
+    // Usando UserManager para contar colaboradores activos
+    if (permisosUsuario.usuarios && userManager) {
+        await cargarColaboradoresActivos(organizacion);
     }
 }
 
-function ocultarEstadoCarga() {
-    const overlay = document.getElementById('loading-overlay');
-    if (overlay) {
-        overlay.style.opacity = '0';
-        setTimeout(() => overlay.remove(), 300);
+// Función genérica para cargar conteo desde cualquier manager
+async function cargarConteoDesdeManager(manager, metodo, organizacion, moduloId) {
+    const numberElement = document.getElementById(`kpi-number-${moduloId}`);
+    if (!numberElement || !manager || !manager[metodo]) return;
+
+    try {
+        const lista = await manager[metodo](organizacion);
+        numberElement.textContent = lista.length;
+    } catch (error) {
+        console.error(`Error cargando ${moduloId}:`, error);
+        numberElement.textContent = '0';
     }
 }
 
+// Función específica para incidencias del usuario
+async function cargarMisIncidencias(organizacion, usuarioId) {
+    const numberElement = document.getElementById('kpi-number-misIncidencias');
+    if (!numberElement || !incidenciaManager) return;
+
+    try {
+        const conteo = await incidenciaManager.getConteoIncidenciasPorUsuario(organizacion, usuarioId);
+        numberElement.textContent = conteo;
+    } catch (error) {
+        console.error('Error obteniendo conteo de mis incidencias:', error);
+        numberElement.textContent = '0';
+    }
+}
+
+// Función para colaboradores activos usando UserManager
+async function cargarColaboradoresActivos(organizacion) {
+    const numberElement = document.getElementById('kpi-number-usuarios');
+    if (!numberElement || !userManager) return;
+    
+    try {
+        // Usar el método getColaboradoresByOrganizacion de UserManager
+        // El segundo parámetro 'false' significa solo activos
+        const colaboradores = await userManager.getColaboradoresByOrganizacion(organizacion, true);
+        numberElement.textContent = colaboradores.length;
+    } catch (error) {
+        console.error('Error cargando colaboradores activos:', error);
+        numberElement.textContent = '0';
+    }
+}
+
+// ========== UTILIDADES ==========
 function mostrarErrorSesion() {
-    ocultarEstadoCarga();
     const container = document.querySelector('.right-layout');
     if (container) {
         container.innerHTML = `
@@ -659,7 +708,7 @@ function mostrarErrorSesion() {
                 <i class="fas fa-user-slash" style="font-size: 64px; color: #ff4d4d; margin-bottom: 20px;"></i>
                 <h2 style="color: white;">SESIÓN NO DETECTADA</h2>
                 <p style="color: #a5a5a5; margin: 20px 0;">Inicia sesión para acceder al panel</p>
-                <button onclick="window.location.href='/iniciar-sesion/'" 
+                <button onclick="window.location.href='/index.html'" 
                     style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
                            border: 1px solid #c0c0c0;
                            color: white;
@@ -674,31 +723,8 @@ function mostrarErrorSesion() {
 }
 
 function mostrarError(mensaje) {
-    ocultarEstadoCarga();
     const container = document.querySelector('.right-layout');
     if (container) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 60px 20px;">
-                <i class="fas fa-exclamation-circle" style="font-size: 64px; color: #ff4d4d; margin-bottom: 20px;"></i>
-                <h2 style="color: white;">ERROR</h2>
-                <p style="color: #a5a5a5; margin: 20px 0;">${escapeHTML(mensaje)}</p>
-                <button onclick="window.location.reload()" 
-                    style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
-                           border: 1px solid #c0c0c0;
-                           color: white;
-                           padding: 12px 24px;
-                           border-radius: 8px;
-                           cursor: pointer;">
-                    <i class="fas fa-sync-alt"></i> REINTENTAR
-                </button>
-            </div>
-        `;
+        container.innerHTML = `<div style="text-align:center;padding:60px;"><i class="fas fa-exclamation-circle" style="font-size:64px;color:#ff4d4d;"></i><h2>ERROR</h2><p>${mensaje}</p><button onclick="window.location.reload()">REINTENTAR</button></div>`;
     }
-}
-
-function escapeHTML(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }

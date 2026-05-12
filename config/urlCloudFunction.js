@@ -12,15 +12,18 @@ const ACTIONS = {
     AUTENTICAR: 'autenticar',
     LISTAR_PANELES: 'listarPaneles',
     VINCULAR_PANEL: 'vincularPanel',
-    VERIFICAR_ACCESO_PANEL: 'verificarAccesoPanel',
-    OBTENER_INFO_PANEL: 'obtenerInfoPanel',
-    LOGIN_PANEL: 'loginPanel',  
+    RENAME_PANEL: 'renamePanel',
+    LOGIN_PANEL: 'loginPanel',
     OBTENER_ESTADO_PANEL: 'obtenerEstadoPanel',
     LISTAR_ZONAS: 'listarZonas',
     LISTAR_EVENTOS: 'listarEventos',
     LISTAR_DISPOSITIVOS: 'listarDispositivos',
     SET_ESTADO_PANEL: 'setEstadoPanel',
-    VERIFICAR_SESION: 'verificarSesion'
+    VERIFICAR_SESION: 'verificarSesion',
+    RESPONDER_EVENTO: 'responderEvento',
+    RECONOCER_ALARMA: 'reconocerAlarma',
+    ENVIAR_COMANDO: 'enviarComando',
+    SILENCIAR_ALARMA: 'silenciarAlarma'
 };
 
 // Exportar configuración

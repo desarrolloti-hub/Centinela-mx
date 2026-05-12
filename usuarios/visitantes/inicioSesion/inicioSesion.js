@@ -169,49 +169,86 @@ document.addEventListener('DOMContentLoaded', function () {
             const planId = user.plan || user.planId || null;
             console.log(`📋 Plan del usuario: ${planId || 'No asignado'}`);
 
-            // ✅ GUARDAR TODOS LOS DATOS DEL USUARIO INCLUYENDO ÁREA, CARGO Y PLAN
-            const userData = {
-                id: user.id,
-                email: user.email || user.correoElectronico,
-                correoElectronico: user.email || user.correoElectronico,
-                nombreCompleto: user.nombreCompleto,
-                nombre: user.nombreCompleto,
-                rol: user.rol,
+            // ✅ GUARDAR TODOS LOS DATOS DEL USUARIO INCLUYENDO ÁREA, CARGO, PLAN Y SUCURSAL
+const userData = {
+    id: user.id,
+    email: user.email || user.correoElectronico,
+    correoElectronico: user.email || user.correoElectronico,
+    nombreCompleto: user.nombreCompleto,
+    nombre: user.nombreCompleto,
+    rol: user.rol,
 
-                // ✅ GUARDAR ORGANIZACIÓN
-                organizacion: user.organizacion,
-                organizacionCamelCase: organizacionCamelCase,
+    // ✅ GUARDAR ORGANIZACIÓN
+    organizacion: user.organizacion,
+    organizacionCamelCase: organizacionCamelCase,
 
-                // ✅ ✅ ✅ IMPORTANTE: GUARDAR ÁREA Y CARGO (SEGÚN LA CLASE USER)
-                areaAsignadaId: user.areaAsignadaId || '',
-                cargoId: user.cargoId || '',
+    // ✅ GUARDAR ÁREA Y CARGO (SEGÚN LA CLASE USER)
+    areaAsignadaId: user.areaAsignadaId || '',
+    cargoId: user.cargoId || '',
 
-                // ✅ ✅ ✅ NUEVO: GUARDAR EL PLAN (ID del documento en colección 'planes')
-                plan: planId,
-                planId: planId, // Por compatibilidad
+    // ✅ ✅ ✅ NUEVO: GUARDAR SUCURSAL ASIGNADA
+    sucursalAsignadaId: user.sucursalAsignadaId || '',
+    sucursalAsignadaNombre: user.sucursalAsignadaNombre || '',
+    sucursalAsignadaCiudad: user.sucursalAsignadaCiudad || '',
 
-                // ✅ GUARDAR ESTADO
-                status: user.status,
-                verificado: user.verificado,
+    // ✅ GUARDAR EL PLAN (ID del documento en colección 'planes')
+    plan: planId,
+    planId: planId, // Por compatibilidad
 
-                // ✅ GUARDAR IMÁGENES
-                fotoUsuario: fotoUsuario || '',
-                fotoOrganizacion: fotoOrganizacion || '',
+    // ✅ GUARDAR ESTADO
+    status: user.status,
+    verificado: user.verificado,
 
-                // ✅ METADATOS DE SESIÓN
-                ultimoAcceso: new Date().toISOString(),
-                sessionStart: new Date().toISOString(),
-                fechaLogin: new Date().toLocaleDateString('es-ES', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                })
-            };
+    // ✅ GUARDAR IMÁGENES
+    fotoUsuario: fotoUsuario || '',
+    fotoOrganizacion: fotoOrganizacion || '',
 
-            // Guardar en localStorage (SOLO userData)
-            localStorage.setItem('userData', JSON.stringify(userData));
+    // ✅ METADATOS DE SESIÓN
+    ultimoAcceso: new Date().toISOString(),
+    sessionStart: new Date().toISOString(),
+    fechaLogin: new Date().toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    })
+};
+
+// Guardar en localStorage
+localStorage.setItem('userData', JSON.stringify(userData));
+
+// ✅ También guardar en localStorage individualmente para fácil acceso
+if (user.sucursalAsignadaId) {
+    localStorage.setItem('userSucursalId', user.sucursalAsignadaId);
+}
+if (user.sucursalAsignadaNombre) {
+    localStorage.setItem('userSucursalNombre', user.sucursalAsignadaNombre);
+}
+if (user.areaAsignadaId) {
+    localStorage.setItem('userAreaId', user.areaAsignadaId);
+}
+if (user.cargoId) {
+    localStorage.setItem('userCargoId', user.cargoId);
+}
+if (user.nombreCompleto) {
+    localStorage.setItem('userNombre', user.nombreCompleto);
+}
+if (user.email || user.correoElectronico) {
+    localStorage.setItem('userEmail', user.email || user.correoElectronico);
+}
+if (user.rol) {
+    localStorage.setItem('userRole', user.rol);
+}
+if (organizacionCamelCase) {
+    localStorage.setItem('userOrganizacionCamelCase', organizacionCamelCase);
+}
+if (user.organizacion) {
+    localStorage.setItem('userOrganizacion', user.organizacion);
+}
+if (planId) {
+    localStorage.setItem('userPlan', planId);
+}
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userRole', user.rol);
             localStorage.setItem('userOrganizacion', user.organizacion);
@@ -259,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ===============================================================
-    // 🔥 FUNCIÓN MEJORADA - Guardar en sessionStorage con área, cargo y PLAN
+    // FUNCIÓN MEJORADA - Guardar en sessionStorage con área, cargo y PLAN
     // ===============================================================
     function saveUserToSessionStorage(user) {
         try {
@@ -278,11 +315,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 organizacion: user.organizacion,
                 organizacionCamelCase: organizacionCamelCase,
 
-                // ✅ GUARDAR ÁREA Y CARGO EN SESSION TAMBIÉN
+                //  GUARDAR ÁREA Y CARGO EN SESSION TAMBIÉN
                 areaAsignadaId: user.areaAsignadaId || '',
                 cargoId: user.cargoId || '',
                 
-                // ✅ ✅ ✅ NUEVO: GUARDAR PLAN EN SESSION TAMBIÉN
+                // NUEVO: GUARDAR PLAN EN SESSION TAMBIÉN
                 plan: planId,
                 planId: planId,
 
@@ -302,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function () {
             sessionStorage.setItem('sessionUser', user.nombreCompleto);
             sessionStorage.setItem('sessionRole', user.rol);
             
-            // ✅ ✅ ✅ Guardar plan en sessionStorage
+            // Guardar plan en sessionStorage
             if (planId) {
                 sessionStorage.setItem('sessionPlan', planId);
             }
@@ -355,19 +392,8 @@ document.addEventListener('DOMContentLoaded', function () {
             title: '¡Bienvenido!',
             html: `
                 <div style="text-align: center;">
-                    <h3>${user.nombreCompleto}</h3>
+                    <h3> Bienvenido: ${user.nombreCompleto}</h3>
                     <p>Sesión iniciada correctamente</p>
-                    
-                    <div>
-                        <p><strong>Organización:</strong> ${user.organizacion}</p>
-                        <p><strong>Rol:</strong> ${user.rol === 'administrador' ? 'ADMINISTRADOR' : 'COLABORADOR'}</p>
-                        <p><strong>Plan:</strong> ${planId}</p>
-                        <p><strong>Área ID:</strong> ${user.areaAsignadaId || 'No asignada'}</p>
-                        <p><strong>Cargo ID:</strong> ${user.cargoId || 'No asignado'}</p>
-                        <p><strong>Estado:</strong> ${user.verificado ? 'Verificado' : 'Pendiente'}</p>
-                    </div>
-                    
-                    <p>Redirigiendo al sistema...</p>
                 </div>
             `,
             showConfirmButton: false,

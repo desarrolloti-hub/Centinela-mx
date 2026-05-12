@@ -1,5 +1,5 @@
 // incidencia.js - CLASE COMPLETA CON PAGINACIÓN
-// CON MÉTODO agregarCanalizacion AGREGADO
+// CON CANALIZACIONES A ÁREAS Y A SUCURSALES
 
 import {
     collection,
@@ -35,6 +35,7 @@ class Incidencia {
         this.id = id;
         this.sucursalId = data.sucursalId || '';
         this.reportadoPorId = data.reportadoPorId || '';
+            this.reportadoPorCodigo = data.reportadoPorCodigo || '';  // ← AGREGAR ESTA LÍNEA
         this.categoriaId = data.categoriaId || '';
         this.subcategoriaId = data.subcategoriaId || '';
         this.fechaInicio = data.fechaInicio ? this._convertirFecha(data.fechaInicio) : new Date();
@@ -49,9 +50,13 @@ class Incidencia {
             this.seguimiento = JSON.parse(JSON.stringify(data.seguimiento));
         }
 
+        // Canalizaciones a ÁREAS (para seguimiento interno)
         this.canalizaciones = data.canalizaciones || {};
         this.canalizacionActiva = data.canalizacionActiva || null;
         this.esMultiCanalizada = data.esMultiCanalizada || false;
+
+        // Canalizaciones a SUCURSALES (para derivar a otra sucursal)
+        this.canalizacionesSucursales = data.canalizacionesSucursales || {};
 
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
@@ -89,13 +94,11 @@ class Incidencia {
         }
     }
 
-    agregarCanalizacion(areaId, areaNombre, usuarioId, usuarioNombre, motivo = '') {
+    // ==================== MÉTODOS PARA CANALIZACIONES A ÁREAS ====================
+
+    agregarCanalizacionInterna(areaId, areaNombre, usuarioId, usuarioNombre, motivo = '') {
         const canalizacionId = `CAN${Date.now()}_${areaId.replace(/[^a-zA-Z0-9]/g, '_')}`;
-
-        if (!this.canalizaciones) {
-            this.canalizaciones = {};
-        }
-
+        
         this.canalizaciones[canalizacionId] = {
             areaId,
             areaNombre,
@@ -111,33 +114,9 @@ class Incidencia {
             this.canalizacionActiva = areaId;
         }
 
-        const totalCanalizaciones = Object.keys(this.canalizaciones).length;
-        if (totalCanalizaciones > 1) {
-            this.esMultiCanalizada = true;
-        }
-
+        this.esMultiCanalizada = Object.keys(this.canalizaciones).length > 1;
+        
         return canalizacionId;
-    }
-
-    agregarMultiplesCanalizaciones(areas, usuarioId, usuarioNombre) {
-        if (!areas || areas.length === 0) return [];
-
-        const idsCreados = [];
-
-        areas.forEach(area => {
-            if (area.areaId && area.areaNombre) {
-                const id = this.agregarCanalizacion(
-                    area.areaId,
-                    area.areaNombre,
-                    usuarioId,
-                    usuarioNombre,
-                    area.motivo || ''
-                );
-                idsCreados.push(id);
-            }
-        });
-
-        return idsCreados;
     }
 
     getCanalizacionesArray() {
@@ -159,7 +138,7 @@ class Incidencia {
         return canalizacionesArray;
     }
 
-    estaCanalizadaA(areaId) {
+    estaCanalizadaAArea(areaId) {
         if (!this.canalizaciones) return false;
         return Object.values(this.canalizaciones).some(c => c.areaId === areaId);
     }
@@ -179,7 +158,7 @@ class Incidencia {
         return areas;
     }
 
-    actualizarEstadoCanalizacion(areaId, nuevoEstado) {
+    actualizarEstadoCanalizacionArea(areaId, nuevoEstado) {
         if (!this.canalizaciones) return false;
 
         let actualizado = false;
@@ -187,17 +166,91 @@ class Incidencia {
         Object.keys(this.canalizaciones).forEach(id => {
             if (this.canalizaciones[id].areaId === areaId) {
                 this.canalizaciones[id].estado = nuevoEstado;
-
-                if (nuevoEstado === 'recibida' && !this.canalizacionActiva) {
-                    this.canalizacionActiva = areaId;
-                }
-
                 actualizado = true;
             }
         });
 
         return actualizado;
     }
+
+    // ==================== MÉTODOS PARA CANALIZACIONES A SUCURSALES ====================
+
+    agregarCanalizacionSucursalInterna(sucursalId, sucursalNombre, usuarioId, usuarioNombre, motivo = '') {
+        const canalizacionId = `CANSUC${Date.now()}_${sucursalId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        
+        this.canalizacionesSucursales[canalizacionId] = {
+            sucursalId,
+            sucursalNombre,
+            canalizadoPor: usuarioId,
+            canalizadoPorNombre: usuarioNombre,
+            motivo: motivo || 'Atención requerida en sucursal',
+            fechaCanalizacion: new Date(),
+            estado: 'pendiente',
+            seguimientos: []
+        };
+        
+        return canalizacionId;
+    }
+
+    getCanalizacionesSucursalesArray() {
+        const canalizacionesArray = [];
+        if (this.canalizacionesSucursales) {
+            Object.keys(this.canalizacionesSucursales).forEach(id => {
+                canalizacionesArray.push({
+                    id,
+                    ...this.canalizacionesSucursales[id]
+                });
+            });
+
+            canalizacionesArray.sort((a, b) => {
+                const fechaA = a.fechaCanalizacion ? new Date(a.fechaCanalizacion) : 0;
+                const fechaB = b.fechaCanalizacion ? new Date(b.fechaCanalizacion) : 0;
+                return fechaB - fechaA;
+            });
+        }
+        return canalizacionesArray;
+    }
+
+    getTotalCanalizacionesSucursales() {
+        return Object.keys(this.canalizacionesSucursales || {}).length;
+    }
+
+    estaCanalizadaASucursal(sucursalId) {
+        if (!this.canalizacionesSucursales) return false;
+        return Object.values(this.canalizacionesSucursales).some(c => c.sucursalId === sucursalId);
+    }
+
+    getSucursalesCanalizadas() {
+        const sucursales = [];
+        if (this.canalizacionesSucursales) {
+            Object.values(this.canalizacionesSucursales).forEach(c => {
+                sucursales.push({
+                    sucursalId: c.sucursalId,
+                    sucursalNombre: c.sucursalNombre,
+                    estado: c.estado,
+                    fechaCanalizacion: c.fechaCanalizacion
+                });
+            });
+        }
+        return sucursales;
+    }
+
+    actualizarEstadoCanalizacionSucursal(sucursalId, nuevoEstado) {
+        if (!this.canalizacionesSucursales) return false;
+
+        let actualizado = false;
+
+        Object.keys(this.canalizacionesSucursales).forEach(id => {
+            if (this.canalizacionesSucursales[id].sucursalId === sucursalId) {
+                this.canalizacionesSucursales[id].estado = nuevoEstado;
+                actualizado = true;
+            }
+        });
+
+        return actualizado;
+    }
+
+    // ==================== MÉTODOS GENERALES ====================
 
     getRutaStorageBase() {
         return `incidencias_${this.organizacionCamelCase}/${this.id}`;
@@ -306,50 +359,6 @@ class Incidencia {
         return this._formatearFecha(this.fechaCreacion);
     }
 
-    async obtenerUrlsImagenes() {
-        try {
-            const urls = [];
-            for (const img of this.imagenes) {
-                if (img.url) {
-                    urls.push(img.url);
-                } else if (img.path) {
-                    const storageRef = ref(storage, img.path);
-                    const url = await getDownloadURL(storageRef);
-                    urls.push(url);
-                }
-            }
-            return urls;
-        } catch (error) {
-            console.error('Error obteniendo URLs de imágenes:', error);
-            return [];
-        }
-    }
-
-    async obtenerImagenesConComentarios() {
-        try {
-            const resultados = [];
-            for (const img of this.imagenes) {
-                let url = img.url;
-                if (!url && img.path) {
-                    const storageRef = ref(storage, img.path);
-                    url = await getDownloadURL(storageRef);
-                }
-
-                resultados.push({
-                    url: url,
-                    comentario: img.comentario || '',
-                    path: img.path,
-                    nombre: img.nombre || 'Imagen',
-                    elementos: img.elementos || []
-                });
-            }
-            return resultados;
-        } catch (error) {
-            console.error('Error obteniendo imágenes con comentarios:', error);
-            return [];
-        }
-    }
-
     toJSON() {
         return {
             id: this.id,
@@ -368,6 +377,7 @@ class Incidencia {
             canalizaciones: this.canalizaciones,
             canalizacionActiva: this.canalizacionActiva,
             esMultiCanalizada: this.esMultiCanalizada,
+            canalizacionesSucursales: this.canalizacionesSucursales,
             organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             creadoPorNombre: this.creadoPorNombre,
@@ -398,11 +408,17 @@ class Incidencia {
             pdfUrl: this.pdfUrl,
             totalSeguimientos: this.getSeguimientosArray().length,
             ultimoSeguimiento: this.getUltimoSeguimiento(),
+            // Canalizaciones a Áreas
             canalizaciones: this.getCanalizacionesArray(),
             totalCanalizaciones: this.getCanalizacionesArray().length,
             areasCanalizadas: this.getAreasCanalizadas(),
             esMultiCanalizada: this.esMultiCanalizada,
             canalizacionActiva: this.canalizacionActiva,
+            // Canalizaciones a Sucursales
+            canalizacionesSucursales: this.getCanalizacionesSucursalesArray(),
+            totalCanalizacionesSucursales: this.getTotalCanalizacionesSucursales(),
+            sucursalesCanalizadas: this.getSucursalesCanalizadas(),
+            // Otros
             organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             creadoPorNombre: this.creadoPorNombre,
@@ -442,25 +458,25 @@ class IncidenciaManager {
 
     _construirConstraints(filtros = {}) {
         const constraints = [];
-
+        
         constraints.push(orderBy("fechaCreacion", "desc"));
-
+        
         if (filtros.estado && filtros.estado !== 'todos') {
             constraints.push(where("estado", "==", filtros.estado));
         }
-
+        
         if (filtros.sucursalId && filtros.sucursalId !== 'todos') {
             constraints.push(where("sucursalId", "==", filtros.sucursalId));
         }
-
+        
         if (filtros.nivelRiesgo && filtros.nivelRiesgo !== 'todos') {
             constraints.push(where("nivelRiesgo", "==", filtros.nivelRiesgo));
         }
-
+        
         if (filtros.categoriaId && filtros.categoriaId !== 'todos') {
             constraints.push(where("categoriaId", "==", filtros.categoriaId));
         }
-
+        
         return constraints;
     }
 
@@ -468,15 +484,15 @@ class IncidenciaManager {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciasCollection = collection(db, collectionName);
-
+            
             const constraints = this._construirConstraints(filtros);
             const constraintsSinOrder = constraints.filter(c => c.type !== 'orderBy');
-
+            
             const q = query(incidenciasCollection, ...constraintsSinOrder);
-
+            
             await consumo.registrarFirestoreLectura(collectionName, 'conteo incidencias');
             const snapshot = await getCountFromServer(q);
-
+            
             return snapshot.data().count;
         } catch (error) {
             console.error('Error contando incidencias:', error);
@@ -492,34 +508,35 @@ class IncidenciaManager {
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciasCollection = collection(db, collectionName);
-
+            
             let constraints = this._construirConstraints(filtros);
-
+            
             if (pagina > 1 && cursores?.ultimoDocumento) {
                 constraints.push(startAfter(cursores.ultimoDocumento));
             }
-
+            
             constraints.push(limit(itemsPorPagina));
-
+            
             const q = query(incidenciasCollection, ...constraints);
-
+            
             await consumo.registrarFirestoreLectura(collectionName, `página ${pagina}`);
             const snapshot = await getDocs(q);
-
+            
             const incidencias = [];
             let ultimoDoc = null;
             let primerDoc = null;
-
+            
             if (!snapshot.empty) {
                 ultimoDoc = snapshot.docs[snapshot.docs.length - 1];
                 primerDoc = snapshot.docs[0];
-
+                
                 snapshot.forEach(doc => {
                     try {
                         const data = doc.data();
                         const incidencia = new Incidencia(doc.id, {
                             ...data,
                             id: doc.id,
+                                reportadoPorCodigo: data.reportadoPorCodigo || '',  // ← AGREGAR
                             fechaCreacion: data.fechaCreacion?.toDate?.() || data.fechaCreacion,
                             fechaInicio: data.fechaInicio?.toDate?.() || data.fechaInicio,
                             fechaActualizacion: data.fechaActualizacion?.toDate?.() || data.fechaActualizacion
@@ -530,9 +547,9 @@ class IncidenciaManager {
                     }
                 });
             }
-
+            
             const total = await this.contarTotalIncidencias(organizacionCamelCase, filtros);
-
+            
             return {
                 incidencias,
                 total,
@@ -542,7 +559,7 @@ class IncidenciaManager {
                 primerDocumento: primerDoc,
                 tieneMas: snapshot.docs.length === itemsPorPagina
             };
-
+            
         } catch (error) {
             console.error('Error obteniendo incidencias paginadas:', error);
             return {
@@ -562,21 +579,21 @@ class IncidenciaManager {
             if (paginaDeseada === 1) {
                 return await this.getIncidenciasPaginadas(organizacionCamelCase, filtros, 1, itemsPorPagina);
             }
-
+            
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciasCollection = collection(db, collectionName);
-
+            
             let constraints = this._construirConstraints(filtros);
             constraints.push(limit((paginaDeseada - 1) * itemsPorPagina + itemsPorPagina));
-
+            
             const q = query(incidenciasCollection, ...constraints);
-
+            
             await consumo.registrarFirestoreLectura(collectionName, `página específica ${paginaDeseada}`);
             const snapshot = await getDocs(q);
-
+            
             const startIndex = (paginaDeseada - 1) * itemsPorPagina;
             const docsPagina = snapshot.docs.slice(startIndex, startIndex + itemsPorPagina);
-
+            
             const incidencias = [];
             docsPagina.forEach(doc => {
                 try {
@@ -593,10 +610,10 @@ class IncidenciaManager {
                     console.error('Error procesando incidencia:', error);
                 }
             });
-
+            
             const total = await this.contarTotalIncidencias(organizacionCamelCase, filtros);
             const ultimoDoc = docsPagina.length > 0 ? docsPagina[docsPagina.length - 1] : null;
-
+            
             return {
                 incidencias,
                 total,
@@ -606,7 +623,7 @@ class IncidenciaManager {
                 primerDocumento: docsPagina.length > 0 ? docsPagina[0] : null,
                 tieneMas: docsPagina.length === itemsPorPagina
             };
-
+            
         } catch (error) {
             console.error('Error obteniendo página específica:', error);
             return {
@@ -623,38 +640,11 @@ class IncidenciaManager {
 
     async subirArchivo(file, rutaCompleta, onProgress = null) {
         try {
-            if (!file) {
-                throw new Error('No se proporcionó archivo');
-            }
-
-            const maxSize = file.type === 'application/pdf' ? 20 * 1024 * 1024 : 10 * 1024 * 1024;
-            if (file.size > maxSize) {
-                throw new Error(`El archivo ${file.name} excede el tamaño máximo de ${maxSize / 1024 / 1024}MB`);
-            }
-
-            if (file.type.startsWith('image/')) {
-                const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-                if (!validImageTypes.includes(file.type)) {
-                    throw new Error(`Formato de imagen no válido: ${file.type}. Usa JPG, PNG, GIF o WEBP`);
-                }
-            } else if (file.type !== 'application/pdf') {
-                throw new Error(`Tipo de archivo no permitido: ${file.type}`);
-            }
-
             const storageRef = ref(storage, rutaCompleta);
-
-            const metadata = {
-                contentType: file.type,
-                customMetadata: {
-                    originalName: file.name,
-                    uploadedAt: new Date().toISOString(),
-                    size: file.size.toString()
-                }
-            };
 
             if (onProgress) {
                 return new Promise((resolve, reject) => {
-                    const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+                    const uploadTask = uploadBytesResumable(storageRef, file);
 
                     uploadTask.on('state_changed',
                         (snapshot) => {
@@ -679,7 +669,7 @@ class IncidenciaManager {
                     );
                 });
             } else {
-                const snapshot = await uploadBytes(storageRef, file, metadata);
+                const snapshot = await uploadBytes(storageRef, file);
                 const downloadURL = await getDownloadURL(snapshot.ref);
                 await consumo.registrarStorageSubida(rutaCompleta, file.name);
                 return {
@@ -734,12 +724,6 @@ class IncidenciaManager {
         }
     }
 
-    /**
-     * CREAR INCIDENCIA - FLUJO OPTIMIZADO:
-     * 1. Subir todas las imágenes primero
-     * 2. Guardar incidencia en Firestore con las URLs de imágenes
-     * 3. Retornar la incidencia para que se pueda generar PDF después
-     */
     async crearIncidencia(data, usuarioActual, archivos = [], imagenesConDatos = []) {
         try {
             if (!usuarioActual || !usuarioActual.organizacionCamelCase) {
@@ -747,67 +731,34 @@ class IncidenciaManager {
             }
 
             const organizacion = usuarioActual.organizacionCamelCase;
+            const collectionName = this._getCollectionName(organizacion);
+            const incidenciasCollection = collection(db, collectionName);
+
             const incidenciaId = this._generarIdIncidencia(organizacion);
+            const incidenciaRef = doc(incidenciasCollection, incidenciaId);
 
-            // =============================================
-            // PASO 1: SUBIR TODAS LAS IMÁGENES PRIMERO
-            // =============================================
             let imagenesUrls = [];
-
             if (archivos.length > 0) {
-                const maxImages = 20;
-                if (archivos.length > maxImages) {
-                    throw new Error(`Máximo ${maxImages} imágenes permitidas`);
-                }
-
-                console.log(`📸 Subiendo ${archivos.length} imágenes...`);
-
                 for (let i = 0; i < archivos.length; i++) {
                     const file = archivos[i];
-                    const datosImagen = imagenesConDatos[i] || {};
-                    const comentario = datosImagen.comentario || '';
-                    const elementos = datosImagen.elementos || [];
+                    const comentario = imagenesConDatos[i]?.comentario || '';
 
-                    let nombreArchivo = datosImagen.generatedName;
-                    if (!nombreArchivo) {
-                        const timestamp = Date.now();
-                        const random = Math.random().toString(36).substring(2, 8);
-                        const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-                        nombreArchivo = `${timestamp}_${random}_${cleanFileName}`;
-                    }
-
+                    const timestamp = Date.now();
+                    const nombreArchivo = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
                     const rutaStorage = `incidencias_${organizacion}/${incidenciaId}/imagenes/${nombreArchivo}`;
 
-                    const onProgress = archivos.length > 1 ? (progress) => {
-                        console.log(`📸 Imagen ${i + 1}/${archivos.length}: ${Math.round(progress)}%`);
-                    } : null;
-
-                    const resultado = await this.subirArchivo(file, rutaStorage, onProgress);
+                    const resultado = await this.subirArchivo(file, rutaStorage);
 
                     imagenesUrls.push({
                         url: resultado.url,
-                        path: resultado.path,
-                        comentario: comentario,
-                        elementos: elementos,
-                        nombre: file.name,
-                        generatedName: nombreArchivo,
-                        tipo: file.type,
-                        tamaño: file.size
+                        comentario: comentario
                     });
                 }
-
-                console.log(`✅ ${imagenesUrls.length} imágenes subidas correctamente`);
             }
-
-            // =============================================
-            // PASO 2: GUARDAR INCIDENCIA EN FIRESTORE
-            // =============================================
-            const collectionName = this._getCollectionName(organizacion);
-            const incidenciasCollection = collection(db, collectionName);
-            const incidenciaRef = doc(incidenciasCollection, incidenciaId);
 
             const fechaInicio = data.fechaInicio || new Date();
 
+            // Canalizaciones a Áreas
             let canalizaciones = {};
             let canalizacionActiva = null;
             let esMultiCanalizada = false;
@@ -837,9 +788,31 @@ class IncidenciaManager {
                 esMultiCanalizada = Object.keys(canalizaciones).length > 1;
             }
 
-            const incidenciaData = {
+            // Canalizaciones a Sucursales
+            let canalizacionesSucursales = {};
+            if (data.canalizacionesSucursales && Array.isArray(data.canalizacionesSucursales) && data.canalizacionesSucursales.length > 0) {
+                data.canalizacionesSucursales.forEach((canal, index) => {
+                    if (canal.sucursalId && canal.sucursalNombre) {
+                        const canalId = `CANSUC${Date.now()}_${index}_${canal.sucursalId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+                        canalizacionesSucursales[canalId] = {
+                            sucursalId: canal.sucursalId,
+                            sucursalNombre: canal.sucursalNombre,
+                            canalizadoPor: usuarioActual.id,
+                            canalizadoPorNombre: usuarioActual.nombreCompleto || '',
+                            motivo: canal.motivo || 'Atención requerida en sucursal',
+                            fechaCanalizacion: new Date(),
+                            estado: 'pendiente',
+                            seguimientos: []
+                        };
+                    }
+                });
+            }
+
+                    const incidenciaData = {
                 sucursalId: data.sucursalId,
                 reportadoPorId: data.reportadoPorId || usuarioActual.id,
+                reportadoPorCodigo: data.reportadoPorCodigo || usuarioActual.codigoColaborador || '',  // ← AGREGAR ESTA LÍNEA
                 categoriaId: data.categoriaId,
                 subcategoriaId: data.subcategoriaId || '',
                 fechaInicio: fechaInicio,
@@ -853,6 +826,7 @@ class IncidenciaManager {
                 canalizaciones: canalizaciones,
                 canalizacionActiva: canalizacionActiva,
                 esMultiCanalizada: esMultiCanalizada,
+                canalizacionesSucursales: canalizacionesSucursales,
                 organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
                 creadoPorNombre: usuarioActual.nombreCompleto || '',
@@ -868,8 +842,7 @@ class IncidenciaManager {
             const nuevaIncidencia = new Incidencia(incidenciaId, {
                 ...incidenciaData,
                 fechaCreacion: new Date(),
-                fechaActualizacion: new Date(),
-                imagenes: imagenesUrls
+                fechaActualizacion: new Date()
             });
 
             this.incidencias.unshift(nuevaIncidencia);
@@ -877,15 +850,15 @@ class IncidenciaManager {
             const historial = await this._getHistorialManager();
             if (historial) {
                 const totalCanalizaciones = Object.keys(canalizaciones).length;
-                const descripcionCanalizacion = totalCanalizaciones > 0
-                    ? ` - Canalizada a ${totalCanalizaciones} área(s)`
-                    : '';
+                const totalCanalizacionesSucursales = Object.keys(canalizacionesSucursales).length;
+                const descripcionCanalizacion = totalCanalizaciones > 0 ? ` - Canalizada a ${totalCanalizaciones} área(s)` : '';
+                const descripcionCanalizacionSucursal = totalCanalizacionesSucursales > 0 ? ` - Derivada a ${totalCanalizacionesSucursales} sucursal(es)` : '';
 
                 await historial.registrarActividad({
                     usuario: usuarioActual,
                     tipo: 'crear',
                     modulo: 'incidencias',
-                    descripcion: `Creó incidencia ${incidenciaId}${descripcionCanalizacion} - ${data.detalles?.substring(0, 50)}...`,
+                    descripcion: `Creó incidencia ${incidenciaId}${descripcionCanalizacion}${descripcionCanalizacionSucursal} - ${data.detalles?.substring(0, 50)}...`,
                     detalles: {
                         incidenciaId,
                         sucursalId: data.sucursalId,
@@ -893,49 +866,15 @@ class IncidenciaManager {
                         nivelRiesgo: data.nivelRiesgo,
                         totalImagenes: imagenesUrls.length,
                         totalCanalizaciones: totalCanalizaciones,
-                        canalizaciones: Object.values(canalizaciones).map(c => c.areaNombre)
+                        totalCanalizacionesSucursales: totalCanalizacionesSucursales
                     }
                 });
             }
 
-            console.log(`✅ Incidencia ${incidenciaId} creada con ${imagenesUrls.length} imágenes`);
-
-            // Retornar la incidencia con las URLs de imágenes ya guardadas
             return nuevaIncidencia;
 
         } catch (error) {
             console.error('Error creando incidencia:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * ACTUALIZAR PDF DE INCIDENCIA (para agregar PDF después de crear)
-     */
-    async actualizarPDFIncidencia(incidenciaId, pdfUrl, organizacionCamelCase, usuarioId, usuarioNombre) {
-        try {
-            const collectionName = this._getCollectionName(organizacionCamelCase);
-            const incidenciaRef = doc(db, collectionName, incidenciaId);
-
-            await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
-            await updateDoc(incidenciaRef, {
-                pdfUrl: pdfUrl,
-                fechaActualizacion: serverTimestamp(),
-                actualizadoPor: usuarioId,
-                actualizadoPorNombre: usuarioNombre
-            });
-
-            const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
-            if (incidenciaIndex !== -1) {
-                this.incidencias[incidenciaIndex].pdfUrl = pdfUrl;
-                this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
-            }
-
-            console.log(`✅ PDF actualizado para incidencia ${incidenciaId}`);
-            return true;
-
-        } catch (error) {
-            console.error('Error actualizando PDF:', error);
             throw error;
         }
     }
@@ -949,7 +888,7 @@ class IncidenciaManager {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
-
+            
             await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
 
@@ -990,7 +929,7 @@ class IncidenciaManager {
             }
 
             const incidenciasQuery = query(incidenciasCollection, ...constraints);
-
+            
             await consumo.registrarFirestoreLectura(collectionName, 'lista incidencias');
             const snapshot = await getDocs(incidenciasQuery);
 
@@ -1042,26 +981,30 @@ class IncidenciaManager {
         }
     }
 
-    async agregarCanalizacion(incidenciaId, areaId, areaNombre, usuarioId, usuarioNombre, motivo = '', organizacionCamelCase = null) {
+    async getIncidenciasPorSucursalCanalizada(organizacionCamelCase, sucursalId, filtros = {}) {
         try {
-            if (!incidenciaId || !areaId) {
-                throw new Error('Faltan datos para agregar canalización');
+            const todasIncidencias = await this.getIncidenciasByOrganizacion(organizacionCamelCase, filtros);
+
+            return todasIncidencias.filter(inc => {
+                if (!inc.canalizacionesSucursales) return false;
+                return Object.values(inc.canalizacionesSucursales).some(c => c.sucursalId === sucursalId);
+            });
+
+        } catch (error) {
+            console.error('Error filtrando incidencias por sucursal canalizada:', error);
+            return [];
+        }
+    }
+
+    // ==================== AGREGAR CANALIZACIÓN A ÁREA ====================
+    async agregarCanalizacion(incidenciaId, areaId, areaNombre, usuarioId, usuarioNombre, motivo = '', organizacionCamelCase) {
+        try {
+            if (!incidenciaId || !areaId || !organizacionCamelCase) {
+                throw new Error('Faltan datos para agregar canalización a área');
             }
 
-            let organizacion = organizacionCamelCase;
-            if (!organizacion) {
-                const incidenciaTemp = await this.getIncidenciaById(incidenciaId, this.organizacionCache);
-                if (incidenciaTemp) {
-                    organizacion = incidenciaTemp.organizacionCamelCase;
-                }
-            }
-
-            if (!organizacion) {
-                throw new Error('No se pudo determinar la organización');
-            }
-
-            const collectionName = this._getCollectionName(organizacion);
-
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            
             const canalizacionId = `CAN${Date.now()}_${areaId.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
             const incidenciaRef = doc(db, collectionName, incidenciaId);
@@ -1097,7 +1040,7 @@ class IncidenciaManager {
             };
 
             const esMultiCanalizada = Object.keys(nuevasCanalizaciones).length > 1;
-
+            
             let canalizacionActiva = incidenciaData.canalizacionActiva;
             if (!canalizacionActiva && Object.keys(nuevasCanalizaciones).length > 0) {
                 canalizacionActiva = areaId;
@@ -1129,7 +1072,77 @@ class IncidenciaManager {
             };
 
         } catch (error) {
-            console.error('Error agregando canalización:', error);
+            console.error('Error agregando canalización a área:', error);
+            throw error;
+        }
+    }
+
+    // ==================== AGREGAR CANALIZACIÓN A SUCURSAL ====================
+    async agregarCanalizacionSucursal(incidenciaId, sucursalId, sucursalNombre, usuarioId, usuarioNombre, motivo = '', organizacionCamelCase) {
+        try {
+            if (!incidenciaId || !sucursalId || !organizacionCamelCase) {
+                throw new Error('Faltan datos para agregar canalización a sucursal');
+            }
+
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+
+            const canalizacionId = `CANSUC${Date.now()}_${sucursalId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+            const incidenciaRef = doc(db, collectionName, incidenciaId);
+            await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
+            const incidenciaSnap = await getDoc(incidenciaRef);
+
+            if (!incidenciaSnap.exists()) {
+                throw new Error('Incidencia no encontrada');
+            }
+
+            const incidenciaData = incidenciaSnap.data();
+            const canalizacionesActuales = incidenciaData.canalizacionesSucursales || {};
+
+            const yaExiste = Object.values(canalizacionesActuales).some(c => c.sucursalId === sucursalId);
+            if (yaExiste) {
+                return { success: false, message: 'Ya está canalizada a esta sucursal' };
+            }
+
+            const nuevaCanalizacion = {
+                sucursalId,
+                sucursalNombre,
+                canalizadoPor: usuarioId,
+                canalizadoPorNombre: usuarioNombre,
+                motivo: motivo || 'Atención requerida en sucursal',
+                fechaCanalizacion: new Date(),
+                estado: 'pendiente',
+                seguimientos: []
+            };
+
+            const nuevasCanalizaciones = {
+                ...canalizacionesActuales,
+                [canalizacionId]: nuevaCanalizacion
+            };
+
+            await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
+            await updateDoc(incidenciaRef, {
+                canalizacionesSucursales: nuevasCanalizaciones,
+                fechaActualizacion: serverTimestamp(),
+                actualizadoPor: usuarioId,
+                actualizadoPorNombre: usuarioNombre
+            });
+
+            const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
+            if (incidenciaIndex !== -1) {
+                this.incidencias[incidenciaIndex].canalizacionesSucursales = nuevasCanalizaciones;
+                this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
+            }
+
+            return {
+                success: true,
+                canalizacionId,
+                sucursalId,
+                sucursalNombre
+            };
+
+        } catch (error) {
+            console.error('Error agregando canalización a sucursal:', error);
             throw error;
         }
     }
@@ -1142,7 +1155,7 @@ class IncidenciaManager {
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
-
+            
             await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
 
@@ -1210,98 +1223,95 @@ class IncidenciaManager {
         }
     }
 
-    async agregarSeguimiento(incidenciaId, usuarioId, usuarioNombre, descripcion, archivos = [], organizacionCamelCase, evidenciasConComentarios = [], fechaSeleccionada, usuarioActual = null) {
-        try {
-            const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
-            if (!incidencia) {
-                throw new Error('Incidencia no encontrada');
-            }
-
-            const seguimientoCount = Object.keys(incidencia.seguimiento || {}).length;
-            const seguimientoId = `SEG${seguimientoCount + 1}`;
-
-            const evidenciasUrls = [];
-            if (archivos.length > 0) {
-                for (let i = 0; i < archivos.length; i++) {
-                    const file = archivos[i];
-                    const comentario = evidenciasConComentarios[i]?.comentario || '';
-
-                    const timestamp = Date.now();
-                    const random = Math.random().toString(36).substring(2, 8);
-                    const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-                    const nombreArchivo = `${timestamp}_${random}_${cleanFileName}`;
-                    const rutaStorage = `incidencias_${organizacionCamelCase}/${incidenciaId}/seguimiento/${seguimientoId}/${nombreArchivo}`;
-
-                    const resultado = await this.subirArchivo(file, rutaStorage);
-
-                    evidenciasUrls.push({
-                        url: resultado.url,
-                        path: resultado.path,
-                        comentario: comentario,
-                        nombre: file.name
-                    });
-                }
-            }
-
-            const fechaSeguimiento = fechaSeleccionada || new Date();
-
-            const nuevoSeguimiento = {
-                usuarioId,
-                usuarioNombre,
-                descripcion,
-                evidencias: evidenciasUrls,
-                fecha: fechaSeguimiento
-            };
-
-            const collectionName = this._getCollectionName(organizacionCamelCase);
-            const incidenciaRef = doc(db, collectionName, incidenciaId);
-
-            const seguimientoActualizado = {
-                ...incidencia.seguimiento,
-                [seguimientoId]: nuevoSeguimiento
-            };
-
-            await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
-            await updateDoc(incidenciaRef, {
-                seguimiento: seguimientoActualizado,
-                fechaActualizacion: serverTimestamp(),
-                actualizadoPor: usuarioId,
-                actualizadoPorNombre: usuarioNombre
-            });
-
-            const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
-            if (incidenciaIndex !== -1) {
-                this.incidencias[incidenciaIndex].seguimiento = seguimientoActualizado;
-                this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
-                this.incidencias[incidenciaIndex].actualizadoPor = usuarioId;
-                this.incidencias[incidenciaIndex].actualizadoPorNombre = usuarioNombre;
-            }
-
-            if (usuarioActual) {
-                const historial = await this._getHistorialManager();
-                if (historial) {
-                    await historial.registrarActividad({
-                        usuario: usuarioActual,
-                        tipo: 'crear',
-                        modulo: 'incidencias',
-                        descripcion: `Agregó seguimiento a incidencia ${incidenciaId}`,
-                        detalles: {
-                            incidenciaId,
-                            seguimientoId,
-                            totalEvidencias: evidenciasUrls.length
-                        }
-                    });
-                }
-            }
-
-            return seguimientoId;
-
-        } catch (error) {
-            console.error('Error agregando seguimiento:', error);
-            throw error;
+ async agregarSeguimiento(incidenciaId, usuarioId, usuarioNombre, descripcion, archivos = [], organizacionCamelCase, evidenciasConComentarios = [], fechaSeleccionada, usuarioActual = null) {
+    try {
+        const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
+        if (!incidencia) {
+            throw new Error('Incidencia no encontrada');
         }
-    }
 
+        const seguimientoCount = Object.keys(incidencia.seguimiento || {}).length;
+        const seguimientoId = `SEG${seguimientoCount + 1}`;
+
+        const evidenciasUrls = [];
+        if (archivos.length > 0) {
+            for (let i = 0; i < archivos.length; i++) {
+                const file = archivos[i];
+                const comentario = evidenciasConComentarios[i]?.comentario || '';
+
+                const timestamp = Date.now();
+                const nombreArchivo = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+                const rutaStorage = `incidencias_${organizacionCamelCase}/${incidenciaId}/seguimiento/${seguimientoId}/${nombreArchivo}`;
+
+                const resultado = await this.subirArchivo(file, rutaStorage);
+
+                evidenciasUrls.push({
+                    url: resultado.url,
+                    comentario: comentario
+                });
+            }
+        }
+
+        const fechaSeguimiento = fechaSeleccionada || new Date();
+
+        // 🔥 MODIFICACIÓN: Guardar también el código del usuario
+        const nuevoSeguimiento = {
+            usuarioId,
+            usuarioNombre,
+            usuarioCodigo: usuarioActual?.codigoColaborador || '',  // ← ESTA LÍNEA ES CLAVE
+            descripcion,
+            evidencias: evidenciasUrls,
+            fecha: fechaSeguimiento
+        };
+
+        const collectionName = this._getCollectionName(organizacionCamelCase);
+        const incidenciaRef = doc(db, collectionName, incidenciaId);
+
+        const seguimientoActualizado = {
+            ...incidencia.seguimiento,
+            [seguimientoId]: nuevoSeguimiento
+        };
+
+        await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
+        await updateDoc(incidenciaRef, {
+            seguimiento: seguimientoActualizado,
+            fechaActualizacion: serverTimestamp(),
+            actualizadoPor: usuarioId,
+            actualizadoPorNombre: usuarioNombre
+        });
+
+        const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
+        if (incidenciaIndex !== -1) {
+            this.incidencias[incidenciaIndex].seguimiento = seguimientoActualizado;
+            this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
+            this.incidencias[incidenciaIndex].actualizadoPor = usuarioId;
+            this.incidencias[incidenciaIndex].actualizadoPorNombre = usuarioNombre;
+        }
+
+        if (usuarioActual) {
+            const historial = await this._getHistorialManager();
+            if (historial) {
+                await historial.registrarActividad({
+                    usuario: usuarioActual,
+                    tipo: 'crear',
+                    modulo: 'incidencias',
+                    descripcion: `Agregó seguimiento a incidencia ${incidenciaId}`,
+                    detalles: {
+                        incidenciaId,
+                        seguimientoId,
+                        totalEvidencias: evidenciasUrls.length
+                    }
+                });
+            }
+        }
+
+        return seguimientoId;
+
+    } catch (error) {
+        console.error('Error agregando seguimiento:', error);
+        throw error;
+    }
+}
     async finalizarIncidencia(incidenciaId, usuarioId, usuarioNombre, organizacionCamelCase, usuarioActual = null) {
         try {
             const incidencia = await this.getIncidenciaById(incidenciaId, organizacionCamelCase);
@@ -1377,7 +1387,7 @@ class IncidenciaManager {
 
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
-
+            
             await consumo.registrarFirestoreEliminacion(collectionName, incidenciaId);
             await deleteDoc(incidenciaRef);
 
@@ -1410,30 +1420,6 @@ class IncidenciaManager {
         }
     }
 
-    async limpiarImagenesTemporales(incidenciaId, organizacionCamelCase) {
-        try {
-            const rutaImagenes = `incidencias_${organizacionCamelCase}/${incidenciaId}/imagenes`;
-            const folderRef = ref(storage, rutaImagenes);
-
-            try {
-                const result = await listAll(folderRef);
-                const deletePromises = result.items.map(item => deleteObject(item));
-                await Promise.all(deletePromises);
-                await consumo.registrarStorageEliminacion(rutaImagenes);
-                console.log(`✅ Limpiadas ${result.items.length} imágenes temporales`);
-            } catch (error) {
-                if (error.code !== 'storage/object-not-found') {
-                    throw error;
-                }
-            }
-
-            return true;
-        } catch (error) {
-            console.error('Error limpiando imágenes temporales:', error);
-            return false;
-        }
-    }
-
     async getIncidenciasPorSucursal(sucursalId, organizacionCamelCase) {
         return await this.getIncidenciasByOrganizacion(organizacionCamelCase, { sucursalId });
     }
@@ -1450,11 +1436,12 @@ class IncidenciaManager {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             await consumo.registrarFirestoreLectura(collectionName, 'estadísticas');
-
+            
             const incidencias = await this.getIncidenciasByOrganizacion(organizacionCamelCase);
 
             const incidenciasCanalizadas = incidencias.filter(i => i.canalizaciones && Object.keys(i.canalizaciones).length > 0);
             const incidenciasMultiCanalizadas = incidencias.filter(i => i.esMultiCanalizada);
+            const incidenciasConCanalizacionSucursal = incidencias.filter(i => i.canalizacionesSucursales && Object.keys(i.canalizacionesSucursales).length > 0);
 
             return {
                 total: incidencias.length,
@@ -1471,7 +1458,9 @@ class IncidenciaManager {
                 conPDF: incidencias.filter(i => i.pdfUrl).length,
                 canalizadas: incidenciasCanalizadas.length,
                 multiCanalizadas: incidenciasMultiCanalizadas.length,
-                totalCanalizaciones: incidencias.reduce((acc, i) => acc + (i.canalizaciones ? Object.keys(i.canalizaciones).length : 0), 0)
+                totalCanalizaciones: incidencias.reduce((acc, i) => acc + (i.canalizaciones ? Object.keys(i.canalizaciones).length : 0), 0),
+                canalizadasSucursales: incidenciasConCanalizacionSucursal.length,
+                totalCanalizacionesSucursales: incidencias.reduce((acc, i) => acc + (i.canalizacionesSucursales ? Object.keys(i.canalizacionesSucursales).length : 0), 0)
             };
         } catch (error) {
             console.error('Error obteniendo estadísticas:', error);
@@ -1483,7 +1472,7 @@ class IncidenciaManager {
         try {
             const collectionName = this._getCollectionName(organizacionCamelCase);
             const incidenciaRef = doc(db, collectionName, incidenciaId);
-
+            
             await consumo.registrarFirestoreLectura(collectionName, incidenciaId);
             const incidenciaSnap = await getDoc(incidenciaRef);
             return incidenciaSnap.exists();
@@ -1496,6 +1485,178 @@ class IncidenciaManager {
     limpiarCache() {
         this.incidencias = [];
     }
+    // Agrega estos métodos a la clase IncidenciaManager (en incidencia.js)
+
+// ==================== MÉTODOS ADICIONALES PARA EL CONTROLLER ====================
+
+/**
+ * Actualiza SOLO las imágenes de una incidencia (sin recargar toda la incidencia)
+ */
+async actualizarImagenes(incidenciaId, imagenesUrls, organizacionCamelCase, usuarioId, usuarioNombre) {
+    try {
+        if (!organizacionCamelCase) {
+            throw new Error('Se requiere organización');
+        }
+
+        const collectionName = this._getCollectionName(organizacionCamelCase);
+        const incidenciaRef = doc(db, collectionName, incidenciaId);
+        
+        await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
+        await updateDoc(incidenciaRef, {
+            imagenes: imagenesUrls,
+            fechaActualizacion: serverTimestamp(),
+            actualizadoPor: usuarioId,
+            actualizadoPorNombre: usuarioNombre
+        });
+
+        // Actualizar caché
+        const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
+        if (incidenciaIndex !== -1) {
+            this.incidencias[incidenciaIndex].imagenes = imagenesUrls;
+            this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error actualizando imágenes:', error);
+        throw error;
+    }
+}
+
+/**
+ * Actualiza SOLO el PDF de una incidencia
+ */
+async actualizarPDF(incidenciaId, pdfUrl, organizacionCamelCase, usuarioId, usuarioNombre) {
+    try {
+        if (!organizacionCamelCase) {
+            throw new Error('Se requiere organización');
+        }
+
+        const collectionName = this._getCollectionName(organizacionCamelCase);
+        const incidenciaRef = doc(db, collectionName, incidenciaId);
+        
+        await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
+        await updateDoc(incidenciaRef, {
+            pdfUrl: pdfUrl,
+            fechaActualizacion: serverTimestamp(),
+            actualizadoPor: usuarioId,
+            actualizadoPorNombre: usuarioNombre
+        });
+
+        // Actualizar caché
+        const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
+        if (incidenciaIndex !== -1) {
+            this.incidencias[incidenciaIndex].pdfUrl = pdfUrl;
+            this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error actualizando PDF:', error);
+        throw error;
+    }
+}
+
+/**
+ * Actualiza múltiples campos de una incidencia (genérico)
+ */
+async actualizarCamposIncidencia(incidenciaId, campos, organizacionCamelCase, usuarioId, usuarioNombre) {
+    try {
+        if (!organizacionCamelCase) {
+            throw new Error('Se requiere organización');
+        }
+
+        const collectionName = this._getCollectionName(organizacionCamelCase);
+        const incidenciaRef = doc(db, collectionName, incidenciaId);
+        
+        const datosActualizar = {
+            ...campos,
+            fechaActualizacion: serverTimestamp(),
+            actualizadoPor: usuarioId,
+            actualizadoPorNombre: usuarioNombre
+        };
+        
+        delete datosActualizar.id;
+        delete datosActualizar.organizacionCamelCase;
+        delete datosActualizar.fechaCreacion;
+        
+        await consumo.registrarFirestoreActualizacion(collectionName, incidenciaId);
+        await updateDoc(incidenciaRef, datosActualizar);
+
+        // Actualizar caché
+        const incidenciaIndex = this.incidencias.findIndex(i => i.id === incidenciaId);
+        if (incidenciaIndex !== -1) {
+            Object.keys(campos).forEach(key => {
+                if (key !== 'id') {
+                    this.incidencias[incidenciaIndex][key] = campos[key];
+                }
+            });
+            this.incidencias[incidenciaIndex].fechaActualizacion = new Date();
+            this.incidencias[incidenciaIndex].actualizadoPor = usuarioId;
+            this.incidencias[incidenciaIndex].actualizadoPorNombre = usuarioNombre;
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error actualizando campos:', error);
+        throw error;
+    }
+}
+/**
+ * Obtiene el conteo de incidencias creadas por un usuario específico (sin suscripción en tiempo real)
+ * @param {string} organizacionCamelCase - Organización del usuario
+ * @param {string} usuarioId - ID del usuario
+ * @returns {Promise<number>} - Conteo de incidencias
+ */
+async getConteoIncidenciasPorUsuario(organizacionCamelCase, usuarioId) {
+    try {
+        if (!organizacionCamelCase || !usuarioId) {
+            return 0;
+        }
+
+        const collectionName = this._getCollectionName(organizacionCamelCase);
+        const incidenciasCollection = collection(db, collectionName);
+        
+        // Query para filtrar por creadoPor (usuarioId)
+        const q = query(incidenciasCollection, where("creadoPor", "==", usuarioId));
+        
+        await consumo.registrarFirestoreLectura(collectionName, 'conteo por usuario');
+        const snapshot = await getCountFromServer(q);
+        
+        return snapshot.data().count;
+    } catch (error) {
+        console.error('Error obteniendo conteo de incidencias por usuario:', error);
+        return 0;
+    }
+}
+// Agrega estos métodos dentro de la clase IncidenciaManager
+
+/**
+ * Obtiene el conteo de incidencias creadas por un usuario específico
+ * @param {string} organizacionCamelCase - Organización del usuario
+ * @param {string} usuarioId - ID del usuario
+ * @returns {Promise<number>} - Conteo de incidencias
+ */
+async getConteoIncidenciasPorUsuario(organizacionCamelCase, usuarioId) {
+    try {
+        if (!organizacionCamelCase || !usuarioId) {
+            return 0;
+        }
+
+        const collectionName = this._getCollectionName(organizacionCamelCase);
+        const incidenciasCollection = collection(db, collectionName);
+        
+        const q = query(incidenciasCollection, where("creadoPor", "==", usuarioId));
+        
+        await consumo.registrarFirestoreLectura(collectionName, 'conteo por usuario');
+        const snapshot = await getCountFromServer(q);
+        
+        return snapshot.data().count;
+    } catch (error) {
+        console.error('Error obteniendo conteo de incidencias por usuario:', error);
+        return 0;
+    }
+}
 }
 
 export { Incidencia, IncidenciaManager };

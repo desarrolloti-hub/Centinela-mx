@@ -1,4 +1,5 @@
 // ARCHIVO JS PARA REGISTRO DE ADMINISTRADOR - VERSIÓN CORREGIDA (SWEETALERT2 PARA FOTOS)
+// CON CAMPO TELÉFONO - SOLO NÚMEROS
 
 // Importar las clases correctamente desde user.js
 import { UserManager } from '/clases/user.js';
@@ -10,33 +11,77 @@ let selectedFile = null;
 let currentPhotoType = '';
 
 // ==================== INICIALIZACIÓN ====================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     if (typeof Swal === 'undefined') {
         console.error('❌ SweetAlert2 no está cargado.');
         return;
     }
-    
+
     initRegistrationForm();
 });
 
 async function initRegistrationForm() {
     console.log('🚀 Iniciando formulario de registro de administrador...');
-    
+
     // Obtener elementos del DOM
     const elements = obtenerElementosDOM();
     if (!elements) return;
-    
+
+    // Configurar filtro de solo números para teléfono
+    configurarFiltroNumerico(elements);
+
     // Instanciar UserManager
     const userManager = new UserManager();
     console.log('✅ UserManager inicializado');
-    
+
     // Configurar handlers
     configurarHandlers(elements, userManager);
-    
+
     // Mostrar mensaje inicial
     mostrarMensajeInicial(elements.mainMessage);
-    
+
     console.log('✅ Formulario de administrador inicializado correctamente');
+}
+
+// ========== FUNCIÓN PARA FILTRAR SOLO NÚMEROS ==========
+function configurarFiltroNumerico(elements) {
+    if (elements.telefono) {
+        elements.telefono.addEventListener('input', function (e) {
+            // Eliminar cualquier carácter que no sea número
+            this.value = this.value.replace(/[^0-9]/g, '');
+
+            // Validar longitud máxima (15 dígitos)
+            if (this.value.length > 15) {
+                this.value = this.value.slice(0, 15);
+            }
+        });
+
+        // Prevenir pegado de texto con caracteres no numéricos
+        elements.telefono.addEventListener('paste', function (e) {
+            e.preventDefault();
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            const numericOnly = pastedText.replace(/[^0-9]/g, '');
+            if (numericOnly) {
+                this.value = numericOnly.slice(0, 15);
+                // Disparar evento input para actualizar validación
+                const inputEvent = new Event('input', { bubbles: true });
+                this.dispatchEvent(inputEvent);
+            }
+        });
+
+        // Prevenir entrada de caracteres no numéricos en tiempo real
+        elements.telefono.addEventListener('keypress', function (e) {
+            const key = e.key;
+            // Permitir teclas de control (backspace, delete, tab, etc.)
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            if (key === 'Backspace' || key === 'Delete' || key === 'Tab' || key === 'ArrowLeft' || key === 'ArrowRight') return;
+
+            // Solo permitir números
+            if (!/^[0-9]$/.test(key)) {
+                e.preventDefault();
+            }
+        });
+    }
 }
 
 // ========== FUNCIONES DE UTILIDAD ==========
@@ -50,27 +95,28 @@ function obtenerElementosDOM() {
             profileImage: document.getElementById('profileImage'),
             editProfileOverlay: document.getElementById('editProfileOverlay'),
             profileInput: document.getElementById('profile-input'),
-            
+
             // Logo de organización
             orgCircle: document.getElementById('orgCircle'),
             orgPlaceholder: document.getElementById('orgPlaceholder'),
             orgImage: document.getElementById('orgImage'),
             editOrgOverlay: document.getElementById('editOrgOverlay'),
             orgInput: document.getElementById('org-input'),
-            
+
             // Campos del formulario
             organization: document.getElementById('organization'),
             fullName: document.getElementById('fullName'),
             email: document.getElementById('email'),
+            telefono: document.getElementById('telefono'), // Campo numérico
             password: document.getElementById('password'),
             confirmPassword: document.getElementById('confirmPassword'),
-            
+
             // Botones y mensajes
             registerBtn: document.getElementById('registerBtn'),
             cancelBtn: document.getElementById('cancelBtn'),
             mainMessage: document.getElementById('mainMessage'),
             registerForm: document.getElementById('registerForm'),
-            
+
             // Toggle de contraseñas
             togglePasswordBtns: document.querySelectorAll('.toggle-password')
         };
@@ -87,7 +133,7 @@ function obtenerElementosDOM() {
 
 function mostrarMensajeInicial(element) {
     if (!element) return;
-    
+
     element.innerHTML = `
         <div class="message-container info" style="display: block;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
@@ -116,20 +162,20 @@ function configurarHandlers(elements, userManager) {
             elements.profileInput.value = ''; // Limpiar antes de abrir
             elements.profileInput.click();
         });
-        
+
         elements.profileCircle.addEventListener('click', () => {
             elements.profileInput.value = ''; // Limpiar antes de abrir
             elements.profileInput.click();
         });
-        
+
         elements.profileInput.addEventListener('change', (e) => {
             if (procesandoFoto) return;
-            
+
             const file = e.target.files[0];
             if (!file) return;
-            
+
             procesandoFoto = true;
-            
+
             manejarSeleccionFoto(file, 'profile', elements)
                 .finally(() => {
                     procesandoFoto = false;
@@ -137,27 +183,27 @@ function configurarHandlers(elements, userManager) {
                 });
         });
     }
-    
+
     // Logo de organización
     if (elements.editOrgOverlay && elements.orgInput) {
         elements.editOrgOverlay.addEventListener('click', () => {
             elements.orgInput.value = ''; // Limpiar antes de abrir
             elements.orgInput.click();
         });
-        
+
         elements.orgCircle.addEventListener('click', () => {
             elements.orgInput.value = ''; // Limpiar antes de abrir
             elements.orgInput.click();
         });
-        
+
         elements.orgInput.addEventListener('change', (e) => {
             if (procesandoFoto) return;
-            
+
             const file = e.target.files[0];
             if (!file) return;
-            
+
             procesandoFoto = true;
-            
+
             manejarSeleccionFoto(file, 'organization', elements)
                 .finally(() => {
                     procesandoFoto = false;
@@ -165,15 +211,15 @@ function configurarHandlers(elements, userManager) {
                 });
         });
     }
-    
+
     // Mostrar/ocultar contraseña
     if (elements.togglePasswordBtns) {
         elements.togglePasswordBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const targetId = this.getAttribute('data-target');
                 const input = document.getElementById(targetId);
                 const icon = this.querySelector('i');
-                
+
                 if (input && icon) {
                     input.type = input.type === 'password' ? 'text' : 'password';
                     icon.classList.toggle('fa-eye');
@@ -182,15 +228,15 @@ function configurarHandlers(elements, userManager) {
             });
         });
     }
-    
+
     // Validación en tiempo real
     configurarValidacionTiempoReal(elements);
-    
+
     // Botón de registro
     if (elements.registerForm) {
         elements.registerForm.addEventListener('submit', (e) => registrarAdministrador(e, elements, userManager));
     }
-    
+
     // Botón cancelar
     if (elements.cancelBtn) {
         elements.cancelBtn.addEventListener('click', () => cancelarRegistro());
@@ -203,14 +249,14 @@ async function manejarSeleccionFoto(file, type, elements) {
     if (!validarArchivo(file, maxSizeMB)) {
         return;
     }
-    
+
     return new Promise((resolve) => {
         const reader = new FileReader();
-        
-        reader.onload = function(e) {
+
+        reader.onload = function (e) {
             const imageBase64 = e.target.result;
             const fileSizeKB = Math.round(file.size / 1024);
-            
+
             Swal.fire({
                 title: type === 'profile' ? 'Confirmar foto de perfil' : 'Confirmar logo de organización',
                 html: `
@@ -244,7 +290,7 @@ async function manejarSeleccionFoto(file, type, elements) {
                             orgImageBase64 = imageBase64;
                         }
                     }
-                    
+
                     Swal.fire({
                         icon: 'success',
                         title: '¡Imagen guardada!',
@@ -256,7 +302,7 @@ async function manejarSeleccionFoto(file, type, elements) {
                 resolve();
             });
         };
-        
+
         reader.readAsDataURL(file);
     });
 }
@@ -264,7 +310,7 @@ async function manejarSeleccionFoto(file, type, elements) {
 function validarArchivo(file, maxSizeMB) {
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     const maxSize = maxSizeMB * 1024 * 1024;
-    
+
     if (!validTypes.includes(file.type)) {
         Swal.fire({
             icon: 'error',
@@ -274,7 +320,7 @@ function validarArchivo(file, maxSizeMB) {
         });
         return false;
     }
-    
+
     if (file.size > maxSize) {
         Swal.fire({
             icon: 'error',
@@ -284,16 +330,29 @@ function validarArchivo(file, maxSizeMB) {
         });
         return false;
     }
-    
+
     return true;
 }
 
 // ========== VALIDACIÓN ==========
 
 function configurarValidacionTiempoReal(elements) {
+    // Validar teléfono en tiempo real (solo números)
+    if (elements.telefono) {
+        elements.telefono.addEventListener('input', function () {
+            if (this.value) {
+                // Validar que solo tenga números y longitud adecuada
+                const isValid = /^[0-9]{8,15}$/.test(this.value);
+                this.style.borderColor = isValid ? '#28a745' : '#dc3545';
+            } else {
+                this.style.borderColor = '';
+            }
+        });
+    }
+
     // Validar coincidencia de contraseñas
     if (elements.confirmPassword) {
-        elements.confirmPassword.addEventListener('input', function() {
+        elements.confirmPassword.addEventListener('input', function () {
             if (elements.password.value && this.value) {
                 this.style.borderColor = elements.password.value === this.value ? '#28a745' : '#dc3545';
             } else {
@@ -301,10 +360,10 @@ function configurarValidacionTiempoReal(elements) {
             }
         });
     }
-    
+
     // Validar email
     if (elements.email) {
-        elements.email.addEventListener('blur', function() {
+        elements.email.addEventListener('blur', function () {
             if (this.value) {
                 const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.value);
                 this.style.borderColor = isValid ? '#28a745' : '#dc3545';
@@ -313,10 +372,10 @@ function configurarValidacionTiempoReal(elements) {
             }
         });
     }
-    
+
     // Validar organización en tiempo real
     if (elements.organization) {
-        elements.organization.addEventListener('blur', function() {
+        elements.organization.addEventListener('blur', function () {
             if (this.value && this.value.trim().length >= 3) {
                 this.style.borderColor = '#28a745';
             } else if (this.value) {
@@ -330,42 +389,49 @@ function configurarValidacionTiempoReal(elements) {
 
 function validarFormulario(elements) {
     const errores = [];
-    
+
     // Organización (con validación de nombre)
     if (!elements.organization.value.trim()) {
         errores.push('El nombre de la organización es obligatorio');
     } else if (elements.organization.value.trim().length < 3) {
         errores.push('El nombre de la organización debe tener al menos 3 caracteres');
     }
-    
+
     // Nombre completo
     if (!elements.fullName.value.trim()) {
         errores.push('El nombre completo es obligatorio');
     } else if (elements.fullName.value.trim().length < 5) {
         errores.push('El nombre completo debe tener al menos 5 caracteres');
     }
-    
+
     // Email
     if (!elements.email.value.trim()) {
         errores.push('El correo electrónico es obligatorio');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(elements.email.value)) {
         errores.push('El correo electrónico no es válido');
     }
-    
+
+    // Teléfono (validación: solo números, entre 8 y 15 dígitos)
+    if (elements.telefono && elements.telefono.value.trim()) {
+        if (!/^[0-9]{8,15}$/.test(elements.telefono.value.trim())) {
+            errores.push('El teléfono debe contener solo números y tener entre 8 y 15 dígitos');
+        }
+    }
+
     // Contraseña
     if (!elements.password.value) {
         errores.push('La contraseña es obligatoria');
     } else if (!validarContrasena(elements.password.value)) {
         errores.push('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial');
     }
-    
+
     // Confirmar contraseña
     if (!elements.confirmPassword.value) {
         errores.push('Debes confirmar la contraseña');
     } else if (elements.password.value !== elements.confirmPassword.value) {
         errores.push('Las contraseñas no coinciden');
     }
-    
+
     return errores;
 }
 
@@ -375,12 +441,12 @@ function validarContrasena(password) {
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /\d/.test(password);
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    
-    return password.length >= minLength && 
-           hasUpperCase && 
-           hasLowerCase && 
-           hasNumber && 
-           hasSpecialChar;
+
+    return password.length >= minLength &&
+        hasUpperCase &&
+        hasLowerCase &&
+        hasNumber &&
+        hasSpecialChar;
 }
 
 function convertToCamelCase(text) {
@@ -397,14 +463,14 @@ function convertToCamelCase(text) {
 async function verificarOrganizacionExistente(nombreOrganizacion, userManager) {
     try {
         console.log('🔍 Verificando si la organización ya existe:', nombreOrganizacion);
-        
+
         // Convertir a diferentes formatos para comparación
         const nombreNormalizado = nombreOrganizacion.toLowerCase().trim();
         const nombreCamelCase = convertToCamelCase(nombreOrganizacion);
-        
+
         // Obtener todas las organizaciones usando el método existente en UserManager
         const organizaciones = await userManager.getTodasLasOrganizaciones();
-        
+
         // Buscar si alguna organización coincide con el nombre
         for (const organizacion of organizaciones) {
             // Comparar nombre normalizado (case-insensitive)
@@ -412,24 +478,24 @@ async function verificarOrganizacionExistente(nombreOrganizacion, userManager) {
                 console.log('❌ Organización encontrada:', organizacion.nombre);
                 return true;
             }
-            
+
             // También verificar camelCase
             if (organizacion.camelCase === nombreCamelCase) {
                 console.log('❌ Organización encontrada (camelCase):', nombreCamelCase);
                 return true;
             }
         }
-        
+
         console.log('✅ Organización disponible');
         return false;
-        
+
     } catch (error) {
         console.error('❌ Error verificando organización:', error);
-        
+
         // Si hay error de Firebase (conexión, permisos, etc.)
         if (error.code === 'permission-denied' || error.code === 'unavailable') {
             console.warn('⚠️ Error de acceso a Firestore. Continuando con validación básica...');
-            
+
             // Mostrar advertencia al usuario
             await Swal.fire({
                 icon: 'warning',
@@ -447,11 +513,11 @@ async function verificarOrganizacionExistente(nombreOrganizacion, userManager) {
                 `,
                 confirmButtonText: 'CONTINUAR'
             });
-            
+
             // Permitir el registro - Firebase Auth detectará duplicados durante el proceso
             return false;
         }
-        
+
         // Para otros errores, permitir el registro y confiar en que Firebase Auth lo manejará
         return false;
     }
@@ -461,13 +527,13 @@ async function verificarOrganizacionExistente(nombreOrganizacion, userManager) {
 
 async function registrarAdministrador(event, elements, userManager) {
     event.preventDefault();
-    
+
     // Deshabilitar botón para evitar doble clic
     if (elements.registerBtn) {
         elements.registerBtn.disabled = true;
         elements.registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
     }
-    
+
     // Validar formulario
     const errores = validarFormulario(elements);
     if (errores.length > 0) {
@@ -477,7 +543,7 @@ async function registrarAdministrador(event, elements, userManager) {
             html: errores.map(msg => `• ${msg}`).join('<br>'),
             confirmButtonText: 'CORREGIR'
         });
-        
+
         // Rehabilitar botón
         if (elements.registerBtn) {
             elements.registerBtn.disabled = false;
@@ -485,9 +551,9 @@ async function registrarAdministrador(event, elements, userManager) {
         }
         return;
     }
-    
+
     const nombreOrganizacion = elements.organization.value.trim();
-    
+
     try {
         // Verificar si la organización ya existe (con loader)
         Swal.fire({
@@ -495,11 +561,11 @@ async function registrarAdministrador(event, elements, userManager) {
             allowOutsideClick: false,
             didOpen: () => Swal.showLoading()
         });
-        
+
         const organizacionExiste = await verificarOrganizacionExistente(nombreOrganizacion, userManager);
-        
+
         Swal.close();
-        
+
         if (organizacionExiste) {
             Swal.fire({
                 icon: 'error',
@@ -518,13 +584,13 @@ async function registrarAdministrador(event, elements, userManager) {
                 `,
                 confirmButtonText: 'ENTENDIDO'
             });
-            
+
             // Resaltar campo de organización
             if (elements.organization) {
                 elements.organization.style.borderColor = '#dc3545';
                 elements.organization.focus();
             }
-            
+
             // Rehabilitar botón
             if (elements.registerBtn) {
                 elements.registerBtn.disabled = false;
@@ -532,7 +598,7 @@ async function registrarAdministrador(event, elements, userManager) {
             }
             return;
         }
-        
+
         // Mostrar confirmación final
         const confirmResult = await Swal.fire({
             title: 'Crear cuenta de administrador',
@@ -541,6 +607,7 @@ async function registrarAdministrador(event, elements, userManager) {
                     <p><strong>Organización:</strong> ${nombreOrganizacion}</p>
                     <p><strong>Nombre:</strong> ${elements.fullName.value.trim()}</p>
                     <p><strong>Email:</strong> ${elements.email.value.trim()}</p>
+                    <p><strong>Teléfono:</strong> ${elements.telefono?.value.trim() || 'No especificado'}</p>
                     <p><strong>Rol:</strong> ADMINISTRADOR PRINCIPAL</p>
                     <p style="color: #ff9800; margin-top: 15px;">
                         <i class="fas fa-exclamation-triangle"></i> Se enviará un correo de verificación.
@@ -553,7 +620,7 @@ async function registrarAdministrador(event, elements, userManager) {
             cancelButtonText: 'CANCELAR',
             allowOutsideClick: false
         });
-        
+
         if (!confirmResult.isConfirmed) {
             // Rehabilitar botón si cancela
             if (elements.registerBtn) {
@@ -562,7 +629,7 @@ async function registrarAdministrador(event, elements, userManager) {
             }
             return;
         }
-        
+
         // Mostrar loader de creación
         Swal.fire({
             title: 'Creando cuenta de administrador...',
@@ -573,18 +640,18 @@ async function registrarAdministrador(event, elements, userManager) {
                 Swal.showLoading();
             }
         });
-        
+
         // Crear objeto de datos para el administrador
         const organizacionCamelCase = convertToCamelCase(nombreOrganizacion);
-        
+
         const adminData = {
             organizacion: nombreOrganizacion,
             organizacionCamelCase: organizacionCamelCase,
             nombreCompleto: elements.fullName.value.trim(),
             correoElectronico: elements.email.value.trim(),
+            telefono: elements.telefono?.value.trim() || '', // Solo números
             fotoUsuario: profileImageBase64,
             fotoOrganizacion: orgImageBase64,
-            // ✅ CORREGIDO: Asignar rol 'administrador' y cargo null
             rol: 'administrador',
             cargo: null,
             status: true,
@@ -592,36 +659,36 @@ async function registrarAdministrador(event, elements, userManager) {
             plan: 'gratis',
             fechaCreacion: new Date()
         };
-        
+
         console.log('📝 Datos del administrador a crear:', {
             organizacion: adminData.organizacion,
             nombre: adminData.nombreCompleto,
             email: adminData.correoElectronico,
-            // ✅ CORREGIDO: Mostrar rol y cargo
+            telefono: adminData.telefono,
             rol: adminData.rol,
             cargo: adminData.cargo,
             camelCase: adminData.organizacionCamelCase
         });
-        
+
         // Registrar administrador usando UserManager
         const resultado = await userManager.createAdministrador(
             adminData,
             elements.password.value
         );
-        
+
         console.log('✅ Administrador creado exitosamente:', resultado);
-        
+
         // Cerrar loader
         Swal.close();
-        
+
         // Mostrar éxito con instrucciones
         await mostrarExitoRegistro(adminData);
-        
+
     } catch (error) {
         console.error('❌ Error creando administrador:', error);
         Swal.close();
         manejarErrorRegistro(error);
-        
+
         // Rehabilitar botón
         if (elements.registerBtn) {
             elements.registerBtn.disabled = false;
@@ -639,6 +706,7 @@ async function mostrarExitoRegistro(adminData) {
                 <p><strong>Organización:</strong> ${adminData.organizacion}</p>
                 <p><strong>Administrador:</strong> ${adminData.nombreCompleto}</p>
                 <p><strong>Email:</strong> ${adminData.correoElectronico}</p>
+                <p><strong>Teléfono:</strong> ${adminData.telefono || 'No especificado'}</p>
                 <p><strong>Rol:</strong> ADMINISTRADOR PRINCIPAL</p>
                 <p style="margin-top: 15px;"><i class="fas fa-envelope"></i> Se ha enviado un correo de verificación</p>
                 <p>Debes verificar tu email antes de iniciar sesión.</p>
@@ -656,10 +724,10 @@ function manejarErrorRegistro(error) {
     let errorMessage = 'Ocurrió un error al crear la cuenta de administrador';
     let errorTitle = 'Error al crear cuenta';
     let errorDetails = error.message || '';
-    
+
     // Manejar errores específicos
     if (error.code) {
-        switch(error.code) {
+        switch (error.code) {
             case 'auth/email-already-in-use':
                 errorMessage = 'Este correo electrónico ya está registrado en el sistema.';
                 errorTitle = 'Email en uso';
@@ -709,7 +777,7 @@ function manejarErrorRegistro(error) {
             errorTitle = 'Límite alcanzado';
         }
     }
-    
+
     Swal.fire({
         icon: 'error',
         title: errorTitle,

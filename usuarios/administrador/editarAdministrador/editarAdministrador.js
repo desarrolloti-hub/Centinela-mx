@@ -73,20 +73,7 @@ async function iniciarEditor(userManager) {
     selectedFile = null;
     currentPhotoType = '';
 
-    if (!userManager.currentUser) {
-        console.warn('⚠️ Usuario no autenticado según UserManager');
-
-        Swal.fire({
-            icon: 'warning',
-            title: 'Sesión expirada',
-            text: 'Debes iniciar sesión para acceder al editor de perfil',
-            timer: 4000,
-            showConfirmButton: false
-        }).then(() => {
-            window.location.href = '/usuarios/visitantes/inicioSesion/inicioSesion.html';
-        });
-        return;
-    }
+    
 
     // Obtener elementos del DOM
     const elements = getElements();
@@ -94,15 +81,12 @@ async function iniciarEditor(userManager) {
     try {
         await loadUserData(userManager, elements);
         setupBasicHandlers(elements);
-        setupPhotoHandlers(elements, userManager); // MODIFICADO: pasamos userManager
+        setupPhotoHandlers(elements, userManager);
         setupSaveHandler(elements, userManager);
         setupPasswordChangeHandler(elements, userManager);
-        // ===== NUEVO: Configurar selectores de área y cargo =====
+        setupFiltroNumerico(elements); // ✅ Configurar filtro para teléfono
         await setupAreaAndCargoHandlers(elements, userManager);
-
-        showMessage(elements.mainMessage, 'success',
-            `Editando perfil de: ${userManager.currentUser.email}`);
-
+        
     } catch (error) {
         console.error('❌ Error inicializando editor:', error);
         showMessage(elements.mainMessage, 'error',
@@ -130,10 +114,11 @@ function getElements() {
         // Formulario
         fullName: document.getElementById('fullName'),
         email: document.getElementById('email'),
+        telefono: document.getElementById('telefono'), // ✅ Elemento teléfono
         organizationName: document.getElementById('organizationName'),
         position: document.getElementById('position'),
 
-        // ===== NUEVO: Selectores de área y cargo =====
+        // Selectores de área y cargo
         areaSelect: document.getElementById('areaSelect'),
         cargoEnAreaSelect: document.getElementById('cargoEnAreaSelect'),
 
@@ -143,6 +128,46 @@ function getElements() {
         backToDashboard: document.getElementById('backToDashboard'),
         mainMessage: document.getElementById('mainMessage')
     };
+}
+
+// ✅ Filtro solo números para teléfono
+function setupFiltroNumerico(elements) {
+    if (elements.telefono) {
+        // Evento input - filtra cualquier caracter no numérico
+        elements.telefono.addEventListener('input', function (e) {
+            let originalValue = this.value;
+            let filteredValue = originalValue.replace(/[^0-9]/g, '');
+            if (filteredValue.length > 15) {
+                filteredValue = filteredValue.slice(0, 15);
+            }
+            if (originalValue !== filteredValue) {
+                this.value = filteredValue;
+            }
+        });
+
+        // Evento paste - solo pega números
+        elements.telefono.addEventListener('paste', function (e) {
+            e.preventDefault();
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            const numericOnly = pastedText.replace(/[^0-9]/g, '');
+            if (numericOnly) {
+                this.value = numericOnly.slice(0, 15);
+                const inputEvent = new Event('input', { bubbles: true });
+                this.dispatchEvent(inputEvent);
+            }
+        });
+
+        // Evento keypress - solo permite teclas numéricas
+        elements.telefono.addEventListener('keypress', function (e) {
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            if (e.key === 'Backspace' || e.key === 'Delete' || e.key === 'Tab' || 
+                e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || 
+                e.key === 'End' || e.key === 'Enter') return;
+            if (!/^[0-9]$/.test(e.key)) {
+                e.preventDefault();
+            }
+        });
+    }
 }
 
 function validateFile(file, type, elements) {
@@ -216,10 +241,15 @@ function updateUI(elements, user) {
         elements.email.value = user.correoElectronico;
     }
 
+    // ✅ ACTUALIZAR TELÉFONO - SIEMPRE MUESTRA EL CAMPO (aunque esté vacío)
+    if (elements.telefono) {
+        elements.telefono.value = user.telefono || ''; 
+    }
+
     if (elements.organizationName && user.organizacion) {
         elements.organizationName.value = user.organizacion;
     }
-
+ 
     if (elements.position) {
         elements.position.value = user.rol === 'administrador' ? 'Administrador' : 'Usuario';
     }
@@ -543,7 +573,7 @@ async function guardarFoto(imageBase64, type, elements, userManager) {
     }
 }
 
-// ========== NUEVAS FUNCIONES PARA ÁREA Y CARGO ==========
+// ========== FUNCIONES PARA ÁREA Y CARGO ==========
 
 async function setupAreaAndCargoHandlers(elements, userManager) {
     if (!elements.areaSelect) return;
@@ -663,7 +693,7 @@ function cargarCargosPorArea(elements) {
     elements.cargoEnAreaSelect.disabled = false;
 }
 
-// ========== HANDLER DE GUARDADO MODIFICADO ==========
+// ========== HANDLER DE GUARDADO MODIFICADO (CON TELÉFONO) ==========
 
 function setupSaveHandler(elements, userManager) {
     if (!elements.saveChangesBtn) return;
@@ -694,7 +724,10 @@ function setupSaveHandler(elements, userManager) {
         });
 
         try {
-            const updateData = { nombreCompleto: nombre };
+            const updateData = { 
+                nombreCompleto: nombre,
+                telefono: elements.telefono?.value.trim() || ''  // ✅ Guardar teléfono
+            };
 
             if (elements.areaSelect && elements.areaSelect.value) {
                 updateData.areaAsignadaId = elements.areaSelect.value;
@@ -722,6 +755,7 @@ function setupSaveHandler(elements, userManager) {
                 currentUser.organizacionCamelCase
             );
 
+            // Actualizar objeto local
             Object.assign(currentUser, updateData);
 
             Swal.close();
@@ -771,6 +805,8 @@ function setupSaveHandler(elements, userManager) {
 }
 
 // ========== FUNCIÓN PARA CAMBIAR CONTRASEÑA ==========
+
+
 
 function setupPasswordChangeHandler(elements, userManager) {
     if (!document.getElementById('changePasswordBtn')) {
@@ -855,31 +891,34 @@ async function showPasswordResetConfirmation(userManager) {
             });
 
             try {
-                const firebaseModule = await import('/config/firebase-config.js');
-                const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js");
-
-                const actionCodeSettings = {
-                    url: 'https://centinela-mx.web.app/verifyEmail.html',
-                    handleCodeInApp: false
-                };
-
-                await sendPasswordResetEmail(firebaseModule.auth, userEmail, actionCodeSettings);
+                // ✅ USAR EL MÉTODO DE UserManager en lugar de conexión directa
+                const resultado = await userManager.enviarCorreoRecuperacion(userEmail);
 
                 Swal.close();
 
-                await Swal.fire({
-                    icon: 'success',
-                    title: '¡Enlace enviado!',
-                    html: `
-                        <div>
-                            <p><strong>Destinatario:</strong> ${userEmail}</p>
-                            <p>Revisa tu correo (incluyendo spam).</p>
-                        </div>
-                    `,
-                    confirmButtonText: 'ENTENDIDO',
-                    allowOutsideClick: false,
-                    timer: 5000
-                });
+                if (resultado.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '¡Enlace enviado!',
+                        html: `
+                            <div>
+                                <p><strong>Destinatario:</strong> ${userEmail}</p>
+                                <p><strong>Válido por:</strong> 1 hora</p>
+                                <p>Revisa tu correo (incluyendo spam).</p>
+                            </div>
+                        `,
+                        confirmButtonText: 'ENTENDIDO',
+                        allowOutsideClick: false,
+                        timer: 5000
+                    });
+                } else {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Error al enviar',
+                        text: resultado.message || 'Ocurrió un error al enviar el correo',
+                        confirmButtonText: 'ENTENDIDO'
+                    });
+                }
 
             } catch (error) {
                 Swal.close();
@@ -887,27 +926,22 @@ async function showPasswordResetConfirmation(userManager) {
 
                 let errorMessage = 'Ocurrió un error al enviar el correo';
 
-                switch (error.code) {
-                    case 'auth/user-not-found':
-                        errorMessage = 'Usuario no encontrado';
-                        break;
-                    case 'auth/invalid-email':
-                        errorMessage = 'Correo inválido';
-                        break;
-                    case 'auth/too-many-requests':
-                        errorMessage = 'Demasiados intentos';
-                        break;
-                    case 'auth/network-request-failed':
-                        errorMessage = 'Error de conexión';
-                        break;
-                    default:
-                        errorMessage = 'Error del sistema';
+                if (error.code === 'auth/user-not-found') {
+                    errorMessage = 'Usuario no encontrado';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'Correo inválido';
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMessage = 'Demasiados intentos';
+                } else if (error.code === 'auth/network-request-failed') {
+                    errorMessage = 'Error de conexión';
+                } else if (error.message) {
+                    errorMessage = error.message;
                 }
 
                 Swal.fire({
                     icon: 'error',
                     title: errorMessage,
-                    text: 'Intenta nuevamente más tarde.',
+                    text: 'Por favor, intenta nuevamente más tarde.',
                     confirmButtonText: 'ENTENDIDO'
                 });
             }
@@ -923,3 +957,5 @@ async function showPasswordResetConfirmation(userManager) {
         });
     }
 }
+
+

@@ -4,65 +4,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mercancía Perdida - Sistema Centinela</title>
+    <title>Mercancía Perdida | Centinela C5</title>
 
     <!-- Estilos -->
     <link rel="stylesheet" href="/components/personalization/personalization.css">
 
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="icon" href="/assets/images/logo.png" type="image/png">
     <link rel="manifest" href="/manifest.json">
-    <link rel="stylesheet" href="mercanciaPerdida.css">
+    <link rel="stylesheet" href="/usuarios/administrador/incidenciasRecuperacion/incidenciasRecuperacion.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <meta name="description" content="Gestión de mercancía perdida o robada - Sistema Centinela">
-    <meta name="keywords" content="centinela, mercancia perdida, robo, extravio, gestion de perdidas">
-    <meta name="author" content="Centinela-MX">
-    <link rel="canonical" href="https://centinela-mx.web.app/">
+    <!-- SEO Básico -->
+    <meta name="description"
+        content="Centinela es un sistema inteligente de seguridad para almacenamiento, monitoreo y predicción de incidencias. Plataforma confiable para prevención y análisis en tiempo real.">
+    <meta name="keywords"
+        content="centinela, centinela, sistema de seguridad, seguridad inteligente, predicción de incidencias, monitoreo de seguridad, plataforma de seguridad, análisis de riesgos, prevención de incidentes">
+    <meta name="author" content="Centinela">
+    <link rel="canonical" href="https://centinela-mx.web.app/" />
 
+    <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://centinela-mx.web.app">
-    <meta property="og:title" content="Centinela-MX | Gestión de Mercancía Perdida">
-    <meta property="og:description" content="Registro y seguimiento de mercancía perdida o robada">
+    <meta property="og:title" content="Centinela-MX | Sistema Inteligente de Seguridad y Predicción">
+    <meta property="og:description"
+        content="Centinela-MX es una plataforma avanzada de seguridad para almacenamiento, monitoreo y predicción de incidencias en tiempo real.">
     <meta property="og:image" content="https://centinela-mx.web.app/assets/images/logo.png">
-    <meta property="og:site_name" content="Centinela-MX">
+    <meta property="og:image:width" content="500">
+    <meta property="og:image:height" content="500">
+    <meta property="og:image:alt" content="Vista previa oficial de Centinela-MX">
+    <meta property="og:image" content="https://centinela-mx.web.app/assets/images/logo.png">
+    <meta property="og:image:width" content="500">
+    <meta property="og:image:height" content="500">
+    <meta property="og:image:alt" content="Logo oficial de Centinela">
+    <meta property="og:site_name" content="Centinela">
 
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Centinela-MX | Gestión de Mercancía Perdida">
-    <meta name="twitter:description" content="Registro y seguimiento de mercancía perdida o robada">
+    <meta name="twitter:url" content="https://centinela-mx.web.app">
+    <meta name="twitter:title" content="Centinela-MX | Seguridad Inteligente">
+    <meta name="twitter:description"
+        content="Sistema de seguridad inteligente para monitoreo, almacenamiento y predicción de incidencias.">
     <meta name="twitter:image" content="https://centinela-mx.web.app/assets/images/logo.png">
+    <meta name="twitter:creator" content="">
 
-    <style>
-        .modal-image-viewer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
+    <!-- Schema.org / JSON-LD -->
+    <script type="application/ld+json">
+    {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "Centinela",
+    "operatingSystem": "Web",
+    "applicationCategory": "SecurityApplication",
+    "description": "Centinela es un sistema inteligente de seguridad para el almacenamiento, monitoreo y predicción de incidencias en tiempo real.",
+    "url": "https://centinela-mx.web.app",
+    "image": "https://centinela-mx.web.app/assets/images/logo.png",
+    "publisher": {
+        "@type": "Organization",
+        "name": "Centinela",
+        "logo": {
+        "@type": "ImageObject",
+        "url": "https://centinela-mx.web.app/assets/images/logo.png"
         }
-        .modal-image-viewer img {
-            max-width: 90%;
-            max-height: 90%;
-            object-fit: contain;
-        }
-        .modal-image-viewer .close-btn {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            font-size: 40px;
-            color: white;
-            cursor: pointer;
-            background: none;
-            border: none;
-        }
-    </style>
+    },
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "MXN"
+    }
+    }
+    </script>
+
 </head>
 
 <body>
@@ -127,7 +142,8 @@
         <div class="card">
             <div class="card-header">
                 <h5><i class="fas fa-list"></i> Lista de Registros</h5>
-                <a href="/usuarios/administrador/crearMercanciaPerdida/crearMercanciaPerdida.html" class="btn-nuevo-registro-header">
+                <a href="/usuarios/administrador/crearIncidenciasRecuperacion/crearIncidenciasRecuperacion.html"
+                    class="btn-nuevo-registro-header">
                     <i class="fas fa-plus"></i> Nuevo Registro
                 </a>
             </div>
@@ -141,9 +157,8 @@
                                 <th>Tipo</th>
                                 <th>Monto Perdido</th>
                                 <th>Monto Recuperado</th>
-                                <th>Estado</th>
                                 <th>Fecha</th>
-                                <th style="width: 180px;">Acciones</th>
+                                <th style="width: 140px;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tablaRegistrosBody">
@@ -183,15 +198,13 @@
     <script type="module" src="/components/autenticador.js"></script>
     <script type="module" src="/components/cargadorTemas.js"></script>
     <script type="module" src="/components/particulas.js"></script>
-    <script type="module" src="/components/navbarAdministrador.js"></script>
-    <script src="/components/footerAdministrador.js"></script>
-    <script type="module" src="mercanciaPerdida.js"></script>
+    <script type="module" src="/components/navbarColaborador.js"></script>
+    <script src="/components/footerColaborador.js"></script>
+    <script type="module" src="/usuarios/administrador/incidenciasRecuperacion/incidenciasRecuperacion.js"></script>
+    <script src="/components/visualizadorPDF.js"></script>
+    <script type="module" src="/components/autenticador.js"></script>
+    <script src="/components/protector-colaborador.js"> </script>
 
-    <script src="/components/protector-de-pagina.js" data-rol="administrador"
-        data-mensaje="Solo administradores pueden acceder a esta página."
-        data-titulo="Acceso de Administrador Requerido"
-        data-redirigir="/usuarios/administrador/dashboard/dashboard.html">
-    </script>
 </body>
 
 </html>

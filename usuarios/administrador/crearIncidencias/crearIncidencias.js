@@ -1,3 +1,7 @@
+// Commit de prueba segundo de Dan
+// crearIncidencias.js - VERSIÓN CORREGIDA
+// SIN SweetAlert al agregar imágenes, SIN importaciones directas de Firebase en el controller
+
 const LIMITES = {
     DETALLES_INCIDENCIA: 1000
 };
@@ -16,8 +20,13 @@ class CrearIncidenciaController {
         this.flatpickrInstance = null;
         this.historialManager = null;
         this.areas = [];
+        this.sucursalesParaNotificar = [];
+        this.areasParaNotificar = [];
         this.AreaManager = null;
         this.notificacionManager = null;
+        this.notificacionSucursalManager = null;
+
+        this.pdfGenerator = null;
 
         this._init();
     }
@@ -46,6 +55,33 @@ class CrearIncidenciaController {
         return this.notificacionManager;
     }
 
+    async _initNotificacionSucursalManager() {
+        if (!this.notificacionSucursalManager) {
+            try {
+                const { NotificacionSucursalManager } = await import('/clases/notificacionSucursal.js');
+                this.notificacionSucursalManager = new NotificacionSucursalManager();
+            } catch (error) {
+                console.error('Error inicializando notificacionSucursalManager:', error);
+            }
+        }
+        return this.notificacionSucursalManager;
+    }
+
+    async _initPDFGenerator() {
+        if (!this.pdfGenerator) {
+            try {
+                const { generadorIPH } = await import('/components/iph-generator.js');
+                this.pdfGenerator = generadorIPH;
+
+                return true;
+            } catch (error) {
+                console.error('Error inicializando PDFGenerator:', error);
+                return false;
+            }
+        }
+        return true;
+    }
+
     async _init() {
         try {
             this._cargarUsuario();
@@ -57,19 +93,128 @@ class CrearIncidenciaController {
             await this._inicializarManager();
             await this._cargarDatosRelacionados();
             await this._cargarAreas();
+            await this._cargarSucursalesParaNotificacion();
             await this._initNotificacionManager();
+            await this._initNotificacionSucursalManager();
+
+            await this._initPDFGenerator();
 
             this._configurarOrganizacion();
             this._inicializarDateTimePicker();
             this._configurarEventos();
             this._inicializarValidaciones();
             this._inicializarValidacionSecuencial();
+            this._configurarDragAndDropYPaste();
 
             this.imageEditorModal = new window.ImageEditorModal();
 
         } catch (error) {
             console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
+        }
+    }
+
+    _configurarDragAndDropYPaste() {
+        const dropZone = document.getElementById('dropZone');
+        const inputImagenes = document.getElementById('inputImagenes');
+
+        if (!dropZone) {
+            this._crearDropZone();
+            return;
+        }
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('drag-over');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('drag-over');
+            });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const files = Array.from(e.dataTransfer.files);
+            const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+            if (imageFiles.length > 0) {
+                this._procesarImagenes(imageFiles);
+            }
+        });
+
+        dropZone.addEventListener('click', () => {
+            if (inputImagenes) {
+                inputImagenes.click();
+            }
+        });
+
+        document.addEventListener('paste', (e) => {
+            this._manejarPegarImagen(e);
+        });
+
+    }
+
+    _crearDropZone() {
+        const imagenesContainer = document.querySelector('.imagenes-section');
+        if (!imagenesContainer) return;
+
+        const dropZoneHTML = `
+            <div id="dropZone" class="drop-zone">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Arrastra y suelta imágenes aquí</p>
+                <p class="small">o haz clic para seleccionar archivos</p>
+                <p class="small text-muted mt-2">
+                    <i class="fas fa-keyboard"></i> También puedes pegar imágenes con Ctrl+V
+                </p>
+            </div>
+        `;
+
+        const previewContainer = document.getElementById('imagenesPreview');
+        if (previewContainer && previewContainer.parentNode) {
+            previewContainer.insertAdjacentHTML('beforebegin', dropZoneHTML);
+        } else {
+            imagenesContainer.insertAdjacentHTML('beforeend', dropZoneHTML);
+        }
+
+        this._configurarDragAndDropYPaste();
+    }
+
+    _manejarPegarImagen(event) {
+        const items = event.clipboardData?.items;
+
+        if (!items) return;
+
+        const imageFiles = [];
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+
+            if (item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file) {
+                    const timestamp = Date.now();
+                    const random = Math.random().toString(36).substring(2, 8);
+                    const extension = file.type.split('/')[1] || 'png';
+                    const fileName = `pasted_${timestamp}_${random}.${extension}`;
+
+                    const renamedFile = new File([file], fileName, { type: file.type });
+                    imageFiles.push(renamedFile);
+                }
+            }
+        }
+
+        if (imageFiles.length > 0) {
+            event.preventDefault();
+            this._procesarImagenes(imageFiles);
         }
     }
 
@@ -105,6 +250,7 @@ class CrearIncidenciaController {
                     }
                 }
             }
+
         });
 
         const sucursalInput = document.getElementById('sucursalIncidencia');
@@ -200,16 +346,6 @@ class CrearIncidenciaController {
         if (fechaInput && typeof flatpickr !== 'undefined') {
             try {
                 const ahora = new Date();
-
-                // Formatear la fecha y hora actual para el placeholder visual
-                const fechaFormateada = ahora.toLocaleString('es-MX', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                });
 
                 this.flatpickrInstance = flatpickr(fechaInput, {
                     enableTime: true,
@@ -315,11 +451,25 @@ class CrearIncidenciaController {
                 );
 
                 this.areas = areasObtenidas.filter(area => area.estado === 'activa');
-                console.log('✅ Áreas activas cargadas:', this.areas.length);
             }
         } catch (error) {
             console.error('Error cargando áreas:', error);
             this.areas = [];
+        }
+    }
+
+    async _cargarSucursalesParaNotificacion() {
+        try {
+            const { SucursalManager } = await import('/clases/sucursal.js');
+            const sucursalManager = new SucursalManager();
+
+            this.sucursalesParaNotificar = await sucursalManager.getSucursalesByOrganizacion(
+                this.usuarioActual.organizacionCamelCase
+            );
+
+        } catch (error) {
+            console.error('Error cargando sucursales:', error);
+            this.sucursalesParaNotificar = [];
         }
     }
 
@@ -336,7 +486,8 @@ class CrearIncidenciaController {
                     organizacionCamelCase: adminData.organizacionCamelCase ||
                         this._generarCamelCase(adminData.organizacion),
                     correo: adminData.correoElectronico || '',
-                    email: adminData.correoElectronico || ''
+                    email: adminData.correoElectronico || '',
+                    codigoColaborador: adminData.codigoColaborador || ''  // ← AGREGAR ESTA LÍNEA
                 };
                 return;
             }
@@ -350,7 +501,8 @@ class CrearIncidenciaController {
                     organizacion: userData.organizacion || userData.empresa || 'Sin organización',
                     organizacionCamelCase: userData.organizacionCamelCase ||
                         this._generarCamelCase(userData.organizacion || userData.empresa),
-                    correo: userData.correo || userData.email || ''
+                    correo: userData.correo || userData.email || '',
+                    codigoColaborador: userData.codigoColaborador || ''  // ← AGREGAR ESTA LÍNEA
                 };
                 return;
             }
@@ -362,7 +514,8 @@ class CrearIncidenciaController {
                 organizacion: 'Mi Organización',
                 organizacionCamelCase: 'miOrganizacion',
                 correo: 'admin@centinela.com',
-                email: 'admin@centinela.com'
+                email: 'admin@centinela.com',
+                codigoColaborador: ''  // ← AGREGAR ESTA LÍNEA
             };
 
         } catch (error) {
@@ -372,7 +525,7 @@ class CrearIncidenciaController {
     }
 
     _generarCamelCase(texto) {
-        if (!texto || typeof texto !== 'string') return 'sinOrganizacion';
+        if (!texto || typeof texto !== 'string') return 'Chedraui';
         return texto
             .toLowerCase()
             .normalize("NFD")
@@ -633,10 +786,7 @@ class CrearIncidenciaController {
 
         document.getElementById('sugerenciasSucursal').innerHTML = '';
 
-        // Habilitar campos dependientes
         this._habilitarCamposPorSucursal(true);
-
-        // SweetAlert eliminado - ya no muestra mensaje de confirmación
     }
 
     _seleccionarCategoria(id, nombre) {
@@ -739,6 +889,7 @@ class CrearIncidenciaController {
         }
     }
 
+    // MODIFICADO: SIN SweetAlert al agregar imágenes
     _procesarImagenes(files) {
         if (!files || files.length === 0) return;
 
@@ -753,13 +904,13 @@ class CrearIncidenciaController {
 
         const archivosValidos = nuevosArchivos.filter(file => {
             if (file.size > maxSize) {
-                this._mostrarNotificacion(`La imagen ${file.name} excede ${maxSize / 1024 / 1024}MB`, 'warning');
+                console.warn(`La imagen ${file.name} excede ${maxSize / 1024 / 1024}MB`);
                 return false;
             }
 
             const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
             if (!validTypes.includes(file.type)) {
-                this._mostrarNotificacion(`Formato no válido: ${file.name}. Usa JPG, PNG, GIF o WEBP`, 'warning');
+                console.warn(`Formato no válido: ${file.name}. Usa JPG, PNG, GIF o WEBP`);
                 return false;
             }
 
@@ -786,6 +937,7 @@ class CrearIncidenciaController {
 
         this._actualizarVistaPreviaImagenes();
         document.getElementById('inputImagenes').value = '';
+
     }
 
     _actualizarVistaPreviaImagenes() {
@@ -889,7 +1041,53 @@ class CrearIncidenciaController {
         });
     }
 
-    _validarYGuardar() {
+    _crearRegistroTemporal(datos) {
+        const fechaObj = new Date(datos.fechaHora);
+
+        const evidenciasProcesadas = datos.imagenes.map((img, index) => {
+            return {
+                id: `temp_${Date.now()}_${index}`,
+                file: img.file,
+                preview: img.preview,
+                url: img.preview,
+                comentario: img.comentario || '',
+                elementos: img.elementos || [],
+                generatedName: img.generatedName
+            };
+        });
+
+        return {
+            id: `INC_${Date.now()}`,
+            sucursalId: datos.sucursalId,
+            sucursalNombre: datos.sucursalNombre,
+            categoriaId: datos.categoriaId,
+            categoriaNombre: datos.categoriaNombre,
+            subcategoriaId: datos.subcategoriaId,
+            subcategoriaNombre: datos.subcategoriaNombre,
+            nivelRiesgo: datos.nivelRiesgo,
+            estado: datos.estado,
+            fechaInicio: fechaObj,
+            detalles: datos.detalles,
+            reportadoPorNombre: this.usuarioActual.nombreCompleto,
+            reportadoPorCodigo: this.usuarioActual.codigoColaborador || '', // ← NUEVO CAMPO
+            imagenes: evidenciasProcesadas,
+            fechaCreacion: new Date(),
+            getEstadoTexto: () => datos.estado === 'pendiente' ? 'Pendiente' : 'Finalizada',
+            getNivelRiesgoTexto: () => this._getRiesgoTexto(datos.nivelRiesgo)
+        };
+    }
+
+    _getRiesgoTexto(riesgo) {
+        const riesgos = {
+            'bajo': 'Bajo',
+            'medio': 'Medio',
+            'alto': 'Alto',
+            'critico': 'Crítico'
+        };
+        return riesgos[riesgo] || riesgo;
+    }
+
+    async _validarYGuardar() {
         const sucursalInput = document.getElementById('sucursalIncidencia');
         const categoriaInput = document.getElementById('categoriaIncidencia');
 
@@ -967,10 +1165,19 @@ class CrearIncidenciaController {
         const subcategoriaSelect = document.getElementById('subcategoriaIncidencia');
         const subcategoriaId = subcategoriaSelect.value;
 
+        const sucursalNombre = sucursalInput.value;
+        const categoriaNombre = categoriaInput.value;
+
+        const subcategoriaNombre = subcategoriaId ?
+            subcategoriaSelect.options[subcategoriaSelect.selectedIndex]?.text : '';
+
         const datos = {
             sucursalId,
+            sucursalNombre,
             categoriaId,
+            categoriaNombre,
             subcategoriaId: subcategoriaId || '',
+            subcategoriaNombre: subcategoriaNombre || '',
             nivelRiesgo,
             estado,
             fechaHora,
@@ -978,32 +1185,601 @@ class CrearIncidenciaController {
             imagenes: this.imagenesSeleccionadas
         };
 
-        this._confirmarYGuardar(datos);
-    }
-
-    async _confirmarYGuardar(datos) {
-        const confirmResult = await Swal.fire({
-            title: '¿Crear incidencia?',
+        const result = await Swal.fire({
+            title: 'Confirmar creación de incidencia',
             html: `
-                <div style="text-align: left;">
-                    <p><strong>Sucursal:</strong> ${document.getElementById('sucursalIncidencia').value}</p>
-                    <p><strong>Categoría:</strong> ${document.getElementById('categoriaIncidencia').value}</p>
-                    <p><strong>Riesgo:</strong> ${datos.nivelRiesgo}</p>
-                    <p><strong>Estado:</strong> ${datos.estado}</p>
-                    <p><strong>Fecha:</strong> ${new Date(datos.fechaHora).toLocaleString()}</p>
-                    <p><strong>Imágenes:</strong> ${datos.imagenes.length}</p>
-                </div>
-            `,
+            <div style="text-align: left;">
+                <p><strong>Sucursal:</strong> ${this._escapeHTML(sucursalNombre)}</p>
+                <p><strong>Categoría:</strong> ${this._escapeHTML(categoriaNombre)}</p>
+                ${subcategoriaId ? `<p><strong>Subcategoría:</strong> ${this._escapeHTML(subcategoriaNombre)}</p>` : ''}
+                <p><strong>Riesgo:</strong> ${this._getRiesgoTexto(nivelRiesgo)}</p>
+                <p><strong>Estado:</strong> ${estado === 'pendiente' ? 'Pendiente' : 'Finalizada'}</p>
+                <p><strong>Fecha:</strong> ${new Date(fechaHora).toLocaleString('es-MX')}</p>
+                <p><strong>Evidencias:</strong> ${this.imagenesSeleccionadas.length} imagen(es)</p>
+            </div>
+        `,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'CREAR INCIDENCIA',
-            cancelButtonText: 'CANCELAR',
+            confirmButtonText: '<i class="fas fa-save"></i> Crear',
+            cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
             confirmButtonColor: '#28a745',
-            reverseButtons: false
+            cancelButtonColor: '#6c757d'
         });
 
-        if (confirmResult.isConfirmed) {
+        if (result.isConfirmed) {
             await this._guardarIncidencia(datos);
+        }
+    }
+
+    async _guardarIncidencia(datos) {
+        const btnCrear = document.getElementById('btnCrearIncidencia');
+        const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check me-2"></i>Crear Incidencia';
+
+        try {
+            if (btnCrear) {
+                btnCrear.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
+                btnCrear.disabled = true;
+            }
+
+            Swal.fire({
+                title: 'Guardando incidencia...',
+                text: 'Creando registro en la base de datos...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const fechaObj = new Date(datos.fechaHora);
+
+            const incidenciaData = {
+                sucursalId: datos.sucursalId,
+                categoriaId: datos.categoriaId,
+                subcategoriaId: datos.subcategoriaId || '',
+                nivelRiesgo: datos.nivelRiesgo,
+                estado: datos.estado,
+                fechaInicio: fechaObj,
+                detalles: datos.detalles,
+                reportadoPorId: this.usuarioActual.id,
+                reportadoPorCodigo: this.usuarioActual.codigoColaborador || '',
+            };
+
+            // 🔥 PRIMERO: Guardar en Firestore para obtener el ID REAL
+            const nuevaIncidencia = await this.incidenciaManager.crearIncidencia(
+                incidenciaData,
+                this.usuarioActual,
+                [],
+                []
+            );
+
+            const folioReal = nuevaIncidencia.id; // ← Este es el ID real de Firestore
+
+
+            // SUBIR IMÁGENES
+            let imagenesSubidas = [];
+
+            if (datos.imagenes && datos.imagenes.length > 0) {
+                Swal.update({
+                    title: 'Subiendo imágenes...',
+                    text: `Subiendo ${datos.imagenes.length} imagen(es)...`
+                });
+
+                const uploadPromises = datos.imagenes.map(async (img, index) => {
+                    const rutaStorage = `incidencias_${this.usuarioActual.organizacionCamelCase}/${nuevaIncidencia.id}/imagenes/${img.generatedName}`;
+                    const resultado = await this.incidenciaManager.subirArchivo(img.file, rutaStorage);
+
+                    return {
+                        url: resultado.url,
+                        path: resultado.path,
+                        comentario: img.comentario || '',
+                        elementos: img.elementos || [],
+                        nombre: img.file.name,
+                        generatedName: img.generatedName,
+                        tipo: img.file.type,
+                        tamaño: img.file.size
+                    };
+                });
+
+                imagenesSubidas = await Promise.all(uploadPromises);
+
+                await this.incidenciaManager.actualizarImagenes(
+                    nuevaIncidencia.id,
+                    imagenesSubidas,
+                    this.usuarioActual.organizacionCamelCase,
+                    this.usuarioActual.id,
+                    this.usuarioActual.nombreCompleto
+                );
+
+                nuevaIncidencia.imagenes = imagenesSubidas;
+            } else {
+                nuevaIncidencia.imagenes = [];
+            }
+
+            // 🔥 SEGUNDO: Generar PDF con el ID REAL de Firestore
+            Swal.update({
+                title: 'Generando PDF...',
+                text: 'Creando el documento de la incidencia...'
+            });
+
+            // Crear objeto temporal con el ID REAL para el PDF
+            const incidenciaParaPDF = {
+                ...nuevaIncidencia,
+                id: folioReal,  // ← Usar el ID real
+                sucursalNombre: datos.sucursalNombre,
+                categoriaNombre: datos.categoriaNombre,
+                subcategoriaNombre: datos.subcategoriaNombre,
+                detalles: datos.detalles,
+                fechaInicio: fechaObj,
+                fechaCreacion: new Date(),
+                imagenes: imagenesSubidas,
+                reportadoPorNombre: this.usuarioActual.nombreCompleto,
+                reportadoPorCodigo: this.usuarioActual.codigoColaborador || '',
+                getSeguimientosArray: () => []
+            };
+
+            let pdfBlob = null;
+            try {
+                pdfBlob = await this.pdfGenerator.generarIPH(incidenciaParaPDF, {
+                    mostrarAlerta: false,
+                    returnBlob: true,
+                    diagnosticar: false
+                });
+            } catch (pdfError) {
+                console.error('Error generando PDF:', pdfError);
+                throw new Error('No se pudo generar el PDF');
+            }
+
+            if (!pdfBlob || pdfBlob.size === 0) {
+                throw new Error('El PDF generado está vacío');
+            }
+
+            // SUBIR PDF
+            // SUBIR PDF Y DESCARGAR AUTOMÁTICAMENTE
+            Swal.update({
+                title: 'Subiendo PDF...',
+                text: 'Guardando el documento PDF...'
+            });
+
+            let pdfUrl = null;
+            if (pdfBlob && pdfBlob.size > 0) {
+                const pdfFile = new File([pdfBlob], `incidencia_${nuevaIncidencia.id}.pdf`, { type: 'application/pdf' });
+                const rutaPDF = `incidencias_${this.usuarioActual.organizacionCamelCase}/${nuevaIncidencia.id}/pdf/incidencia_${nuevaIncidencia.id}.pdf`;
+
+                const resultadoPDF = await this.incidenciaManager.subirArchivo(pdfFile, rutaPDF);
+                pdfUrl = resultadoPDF.url;
+
+                await this.incidenciaManager.actualizarPDF(
+                    nuevaIncidencia.id,
+                    pdfUrl,
+                    this.usuarioActual.organizacionCamelCase,
+                    this.usuarioActual.id,
+                    this.usuarioActual.nombreCompleto
+                );
+
+                // 🔥 DESCARGAR PDF AUTOMÁTICAMENTE 🔥
+                try {
+                    // Crear enlace de descarga
+                    const downloadLink = document.createElement('a');
+                    const urlBlob = URL.createObjectURL(pdfBlob);
+                    downloadLink.href = urlBlob;
+                    downloadLink.download = `incidencia_${folioReal}.pdf`;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                    URL.revokeObjectURL(urlBlob);
+
+
+                } catch (downloadError) {
+                    console.warn('Error al descargar automáticamente:', downloadError);
+                }
+            }
+
+            Swal.close();
+            Swal.close();
+
+            // ===== COMPARTIR PDF =====
+            if (pdfUrl) {
+                const accionCompartir = await this._mostrarDialogoCompartir(pdfUrl, datos);
+
+                const tituloIncidencia = `INCIDENCIA: ${datos.sucursalNombre} - ${datos.categoriaNombre}`;
+                const mensajeTexto = ` *${tituloIncidencia}*\n\n` +
+                    ` *Folio:* ${folioReal}\n` +
+                    ` *PDF:* ${pdfUrl}`;
+
+                if (accionCompartir === 'whatsapp') {
+                    const urlWhatsapp = `https://wa.me/?text=${encodeURIComponent(mensajeTexto)}`;
+                    window.open(urlWhatsapp, '_blank');
+
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'WhatsApp abierto',
+                        text: 'Se abrirá WhatsApp con el enlace del PDF.',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                } else if (accionCompartir === 'link') {
+                    try {
+                        await navigator.clipboard.writeText(pdfUrl);
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'Enlace del PDF copiado',
+                            text: 'El enlace directo al PDF ha sido copiado al portapapeles',
+                            timer: 2500,
+                            showConfirmButton: false
+                        });
+                    } catch (err) {
+                        await Swal.fire({
+                            icon: 'info',
+                            title: 'Enlace del PDF',
+                            html: `<input type="text" value="${pdfUrl}" style="width:100%; padding:8px; margin-top:10px; border-radius:5px;" readonly onclick="this.select()">`,
+                            confirmButtonText: 'Cerrar'
+                        });
+                    }
+                }
+            } else {
+                console.warn('No se pudo generar el PDF');
+                await Swal.fire({
+                    icon: 'warning',
+                    title: 'PDF no disponible',
+                    text: 'No se pudo generar el PDF, pero la incidencia se guardó correctamente.',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+
+            // Canalizaciones (resto igual)
+            let sucursalCanalizada = null;
+            let areasCanalizadas = [];
+
+            const quiereCanalizarSucursal = await Swal.fire({
+                icon: 'question',
+                title: '¿Canalizar a la sucursal?',
+                text: '¿Deseas canalizar esta incidencia a la sucursal seleccionada?',
+                showCancelButton: true,
+                confirmButtonText: 'SÍ, CANALIZAR',
+                cancelButtonText: 'NO, CONTINUAR',
+                confirmButtonColor: '#28a745'
+            });
+
+            if (quiereCanalizarSucursal.isConfirmed) {
+                sucursalCanalizada = await this._canalizarSucursal(nuevaIncidencia.id, datos.detalles.substring(0, 50));
+            }
+
+            const quiereCanalizarArea = await Swal.fire({
+                icon: 'question',
+                title: '¿Canalizar a área(s)?',
+                text: '¿Deseas canalizar esta incidencia a alguna área adicional?',
+                showCancelButton: true,
+                confirmButtonText: 'SÍ, CANALIZAR A ÁREA',
+                cancelButtonText: 'NO, FINALIZAR',
+                confirmButtonColor: '#28a745'
+            });
+
+            if (quiereCanalizarArea.isConfirmed) {
+                areasCanalizadas = await this._canalizarAreas(nuevaIncidencia.id, datos.detalles.substring(0, 50));
+            }
+
+            const tieneSucursal = sucursalCanalizada !== null;
+            const totalAreas = areasCanalizadas.length;
+
+            let mensajeCanalizacion = '';
+            if (tieneSucursal && totalAreas > 0) {
+                mensajeCanalizacion = `Canalizada a sucursal ${sucursalCanalizada.nombre} y ${totalAreas} área(s).`;
+            } else if (tieneSucursal) {
+                mensajeCanalizacion = `Canalizada a sucursal ${sucursalCanalizada.nombre}.`;
+            } else if (totalAreas > 0) {
+                mensajeCanalizacion = `Canalizada a ${totalAreas} área(s).`;
+            } else {
+                mensajeCanalizacion = 'No se canalizó a ninguna sucursal o área.';
+            }
+
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Incidencia creada!',
+                html: `
+                <div style="text-align: left;">
+                    <p><strong>Folio:</strong> ${folioReal}</p>
+                    <p>Incidencia guardada ${nuevaIncidencia.imagenes?.length > 0 ? `con ${nuevaIncidencia.imagenes.length} imagen(es)` : 'sin imágenes'}.</p>
+                    ${pdfBlob && pdfBlob.size > 0 ? '<p>El PDF se ha generado correctamente.</p>' : '<p>No se pudo generar el PDF, pero la incidencia se guardó.</p>'}
+                    <p>${mensajeCanalizacion}</p>
+                </div>
+            `,
+                confirmButtonText: 'Ver incidencias',
+                confirmButtonColor: '#28a745'
+            });
+
+            this._volverALista();
+
+        } catch (error) {
+            console.error('Error guardando incidencia:', error);
+            Swal.close();
+            this._mostrarError(error.message || 'No se pudo crear la incidencia');
+        } finally {
+            if (btnCrear) {
+                btnCrear.innerHTML = originalHTML;
+                btnCrear.disabled = false;
+            }
+        }
+    }
+    async _mostrarDialogoCompartir(pdfUrl, datos) {
+        return new Promise((resolve) => {
+            Swal.fire({
+                title: 'Compartir incidencia',
+                html: `
+                <div style="text-align: center;">
+                    <i class="fas fa-file-pdf" style="font-size: 48px; color: #e74c3c; margin-bottom: 15px; display: inline-block;"></i>
+                    <p style="margin-bottom: 20px;">El PDF se ha generado correctamente</p>
+                    <p style="font-size: 13px; color: #aaa; margin-bottom: 20px;">¿Como deseas compartirlo?</p>
+                    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
+                        <button id="shareWhatsAppBtn" class="btn-compartir" style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a); border: 1px solid #25D366; border-radius: 8px; padding: 12px; color: white; font-weight: 600; font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; transition: all 0.3s ease;">
+                            <i class="fab fa-whatsapp" style="color: #25D366; font-size: 18px;"></i> WhatsApp
+                        </button>
+                        <button id="shareEmailBtn" class="btn-compartir" style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a); border: 1px solid #0077B5; border-radius: 8px; padding: 12px; color: white; font-weight: 600; font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; transition: all 0.3s ease;">
+                            <i class="fas fa-envelope" style="color: #0077B5; font-size: 18px;"></i> Correo Electronico
+                        </button>
+                        <button id="shareLinkBtn" class="btn-compartir" style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a); border: 1px solid var(--color-accent-primary); border-radius: 8px; padding: 12px; color: white; font-weight: 600; font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; transition: all 0.3s ease;">
+                            <i class="fas fa-link" style="color: var(--color-accent-primary); font-size: 18px;"></i> Copiar Enlace
+                        </button>
+                        <button id="shareCancelBtn" class="btn-compartir" style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a); border: 1px solid var(--color-border-light); border-radius: 8px; padding: 12px; color: #aaa; font-weight: 600; font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 5px; transition: all 0.3s ease;">
+                            <i class="fas fa-times" style="color: #aaa; font-size: 18px;"></i> No compartir ahora
+                        </button>
+                    </div>
+                </div>
+            `,
+                icon: 'info',
+                showConfirmButton: false,
+                showCancelButton: false,
+                didOpen: () => {
+                    const tituloIncidencia = `INCIDENCIA: ${datos.sucursalNombre} - ${datos.categoriaNombre}`;
+
+                    document.getElementById('shareWhatsAppBtn').onclick = () => {
+                        Swal.close();
+                        const mensajeWhatsApp = `${tituloIncidencia}\n\nSucursal: ${datos.sucursalNombre}\nRiesgo: ${this._getRiesgoTexto(datos.nivelRiesgo)}\n\nPDF de la incidencia:\n${pdfUrl}\n\n--\nPDF enviado por el sistema Centinela.`;
+                        const urlWhatsapp = `https://wa.me/?text=${encodeURIComponent(mensajeWhatsApp)}`;
+                        window.open(urlWhatsapp, '_blank');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'WhatsApp abierto',
+                            text: 'Se abrira WhatsApp con el enlace del PDF.',
+                            timer: 2500,
+                            showConfirmButton: false
+                        });
+                        resolve('whatsapp');
+                    };
+
+                    document.getElementById('shareEmailBtn').onclick = async () => {
+                        Swal.close();
+
+                        const { value: servicio } = await Swal.fire({
+                            title: 'Enviar por correo',
+                            text: 'Selecciona tu servicio de correo',
+                            icon: 'question',
+                            input: 'select',
+                            inputOptions: {
+                                'gmail': 'Gmail',
+                                'outlook': 'Outlook / Hotmail'
+                            },
+                            inputPlaceholder: 'Selecciona un servicio',
+                            showCancelButton: true,
+                            confirmButtonText: 'Abrir Correo',
+                            cancelButtonText: 'Cancelar',
+                            confirmButtonColor: '#ff9122'
+                        });
+
+                        if (!servicio) {
+                            resolve('cancel');
+                            return;
+                        }
+
+                        const sucursalNombre = datos.sucursalNombre;
+                        const categoriaNombre = datos.categoriaNombre;
+                        const riesgoTexto = this._getRiesgoTexto(datos.nivelRiesgo);
+                        const estadoTexto = datos.estado === 'pendiente' ? 'Pendiente' : 'Finalizada';
+                        const fechaInicio = new Date(datos.fechaHora).toLocaleDateString('es-MX');
+
+                        const tituloIncidencia = `INCIDENCIA: ${sucursalNombre} - ${categoriaNombre}`;
+
+                        const cuerpoTexto =
+                            `${tituloIncidencia}\n\n` +
+                            `Sucursal: ${sucursalNombre}\n` +
+                            `Categoria: ${categoriaNombre}\n` +
+                            `Riesgo: ${riesgoTexto}\n` +
+                            `Fecha: ${fechaInicio}\n` +
+                            `Estado: ${estadoTexto}\n\n` +
+                            `PDF de la incidencia:\n${pdfUrl}\n\n` +
+                            `--\nPDF enviado por el sistema Centinela.`;
+
+                        const asunto = encodeURIComponent(tituloIncidencia);
+                        const cuerpoCodificado = encodeURIComponent(cuerpoTexto);
+
+                        if (servicio === 'gmail') {
+                            window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${asunto}&body=${cuerpoCodificado}`, '_blank');
+                        } else if (servicio === 'outlook') {
+                            window.open(`https://outlook.live.com/mail/0/deeplink/compose?subject=${asunto}&body=${cuerpoCodificado}`, '_blank');
+                        }
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Correo abierto',
+                            text: 'Se abrio tu correo con el enlace del PDF.',
+                            timer: 2500,
+                            showConfirmButton: false
+                        });
+                        resolve('email');
+                    };
+
+                    document.getElementById('shareLinkBtn').onclick = async () => {
+                        Swal.close();
+                        try {
+                            await navigator.clipboard.writeText(pdfUrl);
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Enlace copiado',
+                                text: 'El enlace del PDF ha sido copiado al portapapeles',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                        } catch (err) {
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Enlace del PDF',
+                                html: `<input type="text" value="${pdfUrl}" style="width:100%; padding:8px; margin-top:10px; border-radius:5px; background: #1a1a1a; color: white; border: 1px solid #333;" readonly onclick="this.select()">`,
+                                confirmButtonText: 'Cerrar',
+                                confirmButtonColor: '#28a745'
+                            });
+                        }
+                        resolve('link');
+                    };
+
+                    document.getElementById('shareCancelBtn').onclick = () => {
+                        Swal.close();
+                        resolve('cancel');
+                    };
+                }
+            });
+        });
+    }
+
+
+
+    async _canalizarSucursal(incidenciaId, incidenciaTitulo = '') {
+        const sucursalInput = document.getElementById('sucursalIncidencia');
+        const sucursalId = sucursalInput?.dataset.selectedId;
+        const sucursalNombre = sucursalInput?.value;
+
+        if (!sucursalId || !sucursalNombre) {
+            console.warn('No hay sucursal seleccionada para canalizar');
+            return null;
+        }
+
+        Swal.fire({
+            title: 'Canalizando...',
+            html: '<i class="fas fa-spinner fa-spin"></i>',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        try {
+            const resultado = await this.incidenciaManager.agregarCanalizacionSucursal(
+                incidenciaId,
+                sucursalId,
+                sucursalNombre,
+                this.usuarioActual.id,
+                this.usuarioActual.nombreCompleto,
+                'Canalización desde creación',
+                this.usuarioActual.organizacionCamelCase
+            );
+
+            Swal.close();
+
+            if (resultado && resultado.success) {
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Canalizada',
+                    text: `La incidencia ha sido canalizada a ${sucursalNombre}`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+                await this._enviarNotificacionesSucursal([{
+                    id: sucursalId,
+                    nombre: sucursalNombre
+                }], incidenciaId, incidenciaTitulo);
+
+                return {
+                    id: sucursalId,
+                    nombre: sucursalNombre
+                };
+            } else {
+                throw new Error(resultado?.message || 'Error al guardar canalización');
+            }
+
+        } catch (error) {
+            Swal.close();
+            console.error('Error guardando canalización a sucursal:', error);
+            await Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.message || 'No se pudo canalizar a la sucursal'
+            });
+            return null;
+        }
+    }
+
+    async _enviarNotificacionesSucursal(sucursales, incidenciaId, incidenciaTitulo) {
+        try {
+            const notificacionSucursalManager = await this._initNotificacionSucursalManager();
+
+            if (!notificacionSucursalManager) {
+                console.error('No se pudo inicializar notificacionSucursalManager');
+                return;
+            }
+
+            const sucursalInput = document.getElementById('sucursalIncidencia');
+            const categoriaInput = document.getElementById('categoriaIncidencia');
+            const riesgoSelect = document.getElementById('nivelRiesgo');
+
+            const sucursalesFormateadas = sucursales.map(suc => ({
+                id: suc.id,
+                nombre: suc.nombre
+            }));
+
+            Swal.fire({
+                title: 'Enviando notificaciones...',
+                text: 'Notificando a colaboradores de las sucursales y administradores',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const resultado = await notificacionSucursalManager.notificarMultiplesSucursales({
+                sucursales: sucursalesFormateadas,
+                incidenciaId: incidenciaId,
+                incidenciaTitulo: incidenciaTitulo || 'Incidencia',
+                sucursalId: sucursalInput?.dataset.selectedId || '',
+                sucursalNombre: sucursalInput?.value || '',
+                categoriaId: categoriaInput?.dataset.selectedId || '',
+                categoriaNombre: categoriaInput?.value || '',
+                nivelRiesgo: riesgoSelect?.value || 'medio',
+                tipo: 'canalizacion',
+                prioridad: riesgoSelect?.value === 'critico' ? 'urgente' : 'normal',
+                remitenteId: this.usuarioActual.id,
+                remitenteNombre: this.usuarioActual.nombreCompleto,
+                organizacionCamelCase: this.usuarioActual.organizacionCamelCase,
+                enviarPush: true,
+                incluirAdministradores: true
+            });
+
+            Swal.close();
+
+            if (resultado.success) {
+                let mensaje = `Notificaciones enviadas:`;
+                mensaje += `<br>${resultado.totalColaboradores} colaboradores en ${resultado.sucursales} sucursales`;
+                mensaje += `<br>${resultado.totalAdministradores} administradores`;
+
+                if (resultado.push && resultado.push.enviados > 0) {
+                    mensaje += `<br> Push: ${resultado.push.enviados}/${resultado.push.total} enviados`;
+                }
+
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Notificaciones enviadas',
+                    html: mensaje,
+                    timer: 4000,
+                    showConfirmButton: false
+                });
+            } else {
+                console.error('Error:', resultado.error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudieron enviar las notificaciones'
+                });
+            }
+
+        } catch (error) {
+            console.error('Error en _enviarNotificacionesSucursal:', error);
+            Swal.close();
         }
     }
 
@@ -1012,18 +1788,31 @@ class CrearIncidenciaController {
         let areasCanalizadas = [];
 
         while (continuar) {
+            const areaOptions = {};
+            this.areas.forEach(area => {
+                if (!areasCanalizadas.some(a => a.id === area.id)) {
+                    areaOptions[area.id] = area.nombreArea;
+                }
+            });
+
+            if (Object.keys(areaOptions).length === 0) {
+                await Swal.fire({
+                    icon: 'info',
+                    title: 'No hay más áreas',
+                    text: 'Ya has canalizado a todas las áreas disponibles',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                break;
+            }
+
             const { value: areaId, isConfirmed } = await Swal.fire({
                 title: areasCanalizadas.length === 0 ? '¿Canalizar a un área?' : 'Canalizar a otra área',
                 text: areasCanalizadas.length === 0
                     ? 'Selecciona el área a la que deseas canalizar esta incidencia'
                     : `Áreas actuales: ${areasCanalizadas.map(a => a.nombre).join(', ')}\n\nSelecciona otra área (o cancela para terminar)`,
                 input: 'select',
-                inputOptions: this.areas.reduce((opts, area) => {
-                    if (!areasCanalizadas.some(a => a.id === area.id)) {
-                        opts[area.id] = area.nombreArea;
-                    }
-                    return opts;
-                }, {}),
+                inputOptions: areaOptions,
                 inputPlaceholder: 'Selecciona un área',
                 showCancelButton: true,
                 confirmButtonText: 'CANALIZAR',
@@ -1050,37 +1839,34 @@ class CrearIncidenciaController {
                     });
 
                     try {
-                        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-                        const { db } = await import('/config/firebase-config.js');
+                        const resultado = await this.incidenciaManager.agregarCanalizacion(
+                            incidenciaId,
+                            area.id,
+                            area.nombreArea,
+                            this.usuarioActual.id,
+                            this.usuarioActual.nombreCompleto,
+                            'Canalización desde creación',
+                            this.usuarioActual.organizacionCamelCase
+                        );
 
-                        const collectionName = `incidencias_${this.usuarioActual.organizacionCamelCase}`;
-                        const incidenciaRef = doc(db, collectionName, incidenciaId);
-
-                        await updateDoc(incidenciaRef, {
-                            canalizaciones: arrayUnion({
-                                areaId: area.id,
-                                areaNombre: area.nombreArea,
-                                fechaCanalizacion: new Date(),
-                                canalizadoPor: this.usuarioActual.id,
-                                canalizadoPorNombre: this.usuarioActual.nombreCompleto,
-                                estado: 'pendiente'
-                            })
-                        });
-
-                        await Swal.fire({
-                            icon: 'success',
-                            title: 'Área agregada',
-                            text: `La incidencia ha sido canalizada a ${area.nombreArea}`,
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
+                        if (resultado && resultado.success) {
+                            await Swal.fire({
+                                icon: 'success',
+                                title: 'Área agregada',
+                                text: `La incidencia ha sido canalizada a ${area.nombreArea}`,
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            throw new Error(resultado?.message || 'Error al guardar canalización');
+                        }
 
                     } catch (error) {
                         console.error('Error guardando canalización:', error);
                         await Swal.fire({
                             icon: 'error',
                             title: 'Error',
-                            text: 'No se pudo canalizar a esta área'
+                            text: error.message || 'No se pudo canalizar a esta área'
                         });
                     }
                 }
@@ -1112,9 +1898,6 @@ class CrearIncidenciaController {
                 nombre: area.nombre
             }));
 
-            console.log('📨 Enviando notificaciones a áreas:', areasFormateadas);
-            console.log('👑 Administradores recibirán automáticamente la notificación');
-
             Swal.fire({
                 title: 'Enviando notificaciones...',
                 text: 'Notificando a colaboradores de las áreas y administradores',
@@ -1142,15 +1925,13 @@ class CrearIncidenciaController {
             Swal.close();
 
             if (resultado.success) {
-                let mensaje = `✅ Notificaciones enviadas:`;
-                mensaje += `<br>👥 ${resultado.totalColaboradores} colaboradores en ${resultado.areas} áreas`;
-                mensaje += `<br>👑 ${resultado.totalAdministradores} administradores`;
+                let mensaje = `Notificaciones enviadas:`;
+                mensaje += `<br> ${resultado.totalColaboradores} colaboradores en ${resultado.areas} áreas`;
+                mensaje += `<br> ${resultado.totalAdministradores} administradores`;
 
                 if (resultado.push && resultado.push.enviados > 0) {
                     mensaje += `<br>📱 Push: ${resultado.push.enviados}/${resultado.push.total} enviados`;
                 }
-
-                console.log(mensaje);
 
                 Swal.fire({
                     icon: 'success',
@@ -1160,7 +1941,7 @@ class CrearIncidenciaController {
                     showConfirmButton: false
                 });
             } else {
-                console.error('❌ Error:', resultado.error);
+                console.error('Error:', resultado.error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
@@ -1171,194 +1952,6 @@ class CrearIncidenciaController {
         } catch (error) {
             console.error('Error en _enviarNotificacionesCanalizacion:', error);
             Swal.close();
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: error.message
-            });
-        }
-    }
-
-    async _guardarIncidencia(datos) {
-        const btnCrear = document.getElementById('btnCrearIncidencia');
-        const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check me-2"></i>Crear Incidencia';
-
-        try {
-            if (btnCrear) {
-                btnCrear.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Guardando...';
-                btnCrear.disabled = true;
-            }
-
-            Swal.fire({
-                title: 'Creando incidencia...',
-                text: 'Subiendo imágenes y guardando información...',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            const fechaObj = new Date(datos.fechaHora);
-
-            const incidenciaData = {
-                sucursalId: datos.sucursalId,
-                categoriaId: datos.categoriaId,
-                subcategoriaId: datos.subcategoriaId || '',
-                nivelRiesgo: datos.nivelRiesgo,
-                estado: datos.estado,
-                fechaInicio: fechaObj,
-                detalles: datos.detalles,
-                reportadoPorId: this.usuarioActual.id
-            };
-
-            const archivos = datos.imagenes.map(img => img.file);
-            const imagenesConDatos = datos.imagenes.map(img => ({
-                comentario: img.comentario,
-                elementos: img.elementos,
-                generatedName: img.generatedName
-            }));
-
-            const nuevaIncidencia = await this.incidenciaManager.crearIncidencia(
-                incidenciaData,
-                this.usuarioActual,
-                archivos,
-                imagenesConDatos
-            );
-
-            console.log('✅ Incidencia creada con', nuevaIncidencia.imagenes.length, 'imágenes');
-
-            Swal.update({
-                title: 'Generando PDF...',
-                text: 'Creando documento de la incidencia...'
-            });
-
-            const pdfGenerado = await this._generarYSubirPDF(nuevaIncidencia);
-
-            if (pdfGenerado) {
-                console.log('✅ PDF generado y guardado correctamente');
-            } else {
-                console.warn('⚠️ PDF no se pudo generar, pero la incidencia ya está guardada');
-            }
-
-            Swal.close();
-
-            const quiereCanalizar = await Swal.fire({
-                icon: 'question',
-                title: '¿Canalizar esta incidencia?',
-                text: '¿Deseas canalizar esta incidencia a alguna área?',
-                showCancelButton: true,
-                confirmButtonText: 'SÍ, CANALIZAR',
-                cancelButtonText: 'NO, FINALIZAR',
-                confirmButtonColor: '#28a745'
-            });
-
-            let areasCanalizadas = [];
-
-            if (quiereCanalizar.isConfirmed) {
-                areasCanalizadas = await this._canalizarAreas(nuevaIncidencia.id, datos.detalles.substring(0, 50));
-            }
-
-            const totalCanalizaciones = areasCanalizadas.length;
-            const mensajeCanalizacion = totalCanalizaciones > 0
-                ? `Canalizada a ${totalCanalizaciones} ${totalCanalizaciones === 1 ? 'área' : 'áreas'}.`
-                : 'No se canalizó a ninguna área.';
-
-            const mensajePDF = pdfGenerado
-                ? '✅ El PDF se ha generado correctamente.'
-                : '⚠️ El PDF no se pudo generar, pero la incidencia se guardó.';
-
-            await Swal.fire({
-                icon: 'success',
-                title: '¡Incidencia creada!',
-                html: `
-                    <div style="text-align: left;">
-                        <p>✅ Incidencia guardada con ${nuevaIncidencia.imagenes.length} imagen(es).</p>
-                        <p>${mensajePDF}</p>
-                        <p>${mensajeCanalizacion}</p>
-                    </div>
-                `,
-                confirmButtonText: 'Ver incidencias',
-                confirmButtonColor: '#28a745'
-            });
-
-            this._volverALista();
-
-        } catch (error) {
-            console.error('Error guardando incidencia:', error);
-            Swal.close();
-            this._mostrarError(error.message || 'No se pudo crear la incidencia');
-        } finally {
-            if (btnCrear) {
-                btnCrear.innerHTML = originalHTML;
-                btnCrear.disabled = false;
-            }
-        }
-    }
-
-    async _generarYSubirPDF(incidencia) {
-        try {
-            console.log('📄 Iniciando generación automática de PDF para:', incidencia.id);
-            console.log('📸 Imágenes disponibles para PDF:', incidencia.imagenes.length);
-
-            const { generadorIPH } = await import('/components/iph-generator.js');
-
-            generadorIPH.configurar({
-                organizacionActual: {
-                    nombre: this.usuarioActual.organizacion,
-                    camelCase: this.usuarioActual.organizacionCamelCase
-                },
-                sucursalesCache: this.sucursales,
-                categoriasCache: this.categorias,
-                authToken: localStorage.getItem('authToken')
-            });
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            const incidenciaActualizada = await this.incidenciaManager.getIncidenciaById(
-                incidencia.id,
-                this.usuarioActual.organizacionCamelCase
-            );
-
-            if (!incidenciaActualizada) {
-                throw new Error('No se pudo recargar la incidencia');
-            }
-
-            console.log('📸 Imágenes en incidencia recargada:', incidenciaActualizada.imagenes.length);
-
-            const pdfBlob = await generadorIPH.generarIPH(incidenciaActualizada, {
-                mostrarAlerta: false,
-                returnBlob: true
-            });
-
-            if (!pdfBlob || pdfBlob.size === 0) {
-                throw new Error('El PDF generado está vacío');
-            }
-
-            console.log(`📦 PDF generado: ${pdfBlob.size} bytes`);
-
-            const pdfFile = new File([pdfBlob], `incidencia_${incidencia.id}.pdf`, { type: 'application/pdf' });
-
-            const rutaPDF = incidencia.getRutaPDF();
-            console.log('📤 Subiendo PDF a:', rutaPDF);
-
-            const resultado = await this.incidenciaManager.subirArchivo(pdfFile, rutaPDF);
-
-            await this.incidenciaManager.actualizarPDFIncidencia(
-                incidencia.id,
-                resultado.url,
-                this.usuarioActual.organizacionCamelCase,
-                this.usuarioActual.id,
-                this.usuarioActual.nombreCompleto
-            );
-
-            console.log('✅ PDF subido exitosamente:', resultado.url);
-            return true;
-
-        } catch (error) {
-            console.error('❌ Error generando PDF automático:', error);
-            return false;
         }
     }
 
@@ -1441,6 +2034,156 @@ class CrearIncidenciaController {
         }
     }
 }
+
+// FORMULARIO SECUENCIAL
+function inicializarFormularioSecuencial() {
+    let pasoActual = 0;
+    const totalPasos = 7;
+    const campos = document.querySelectorAll('.field-group-step');
+    const seccionImagenes = document.getElementById('seccionImagenesWrapper');
+    const botonesContainer = document.getElementById('originalButtons');
+
+    campos.forEach(campo => {
+        campo.classList.remove('visible');
+    });
+
+    if (campos[0]) {
+        campos[0].classList.add('visible');
+    }
+
+    function verificarBotonesFinales() {
+        const sucursalValida = document.getElementById('sucursalIncidencia')?.dataset.selectedId &&
+            document.getElementById('sucursalIncidencia')?.value.trim() !== '';
+        const categoriaValida = document.getElementById('categoriaIncidencia')?.dataset.selectedId &&
+            document.getElementById('categoriaIncidencia')?.value.trim() !== '';
+        const riesgoValido = document.getElementById('nivelRiesgo')?.value !== '';
+        const estadoValido = document.getElementById('estadoIncidencia')?.value !== '';
+        const fechaValida = (() => {
+            const fechaValor = document.getElementById('fechaHoraIncidencia')?.value;
+            if (!fechaValor) return false;
+            const fecha = new Date(fechaValor);
+            return !isNaN(fecha.getTime()) && fecha <= new Date();
+        })();
+        const descripcionValida = (() => {
+            const texto = document.getElementById('detallesIncidencia')?.value.trim() || '';
+            return texto.length >= 10 && texto.length <= 1000;
+        })();
+
+        const todoCompleto = sucursalValida && categoriaValida && riesgoValido &&
+            estadoValido && fechaValida && descripcionValida;
+
+        if (todoCompleto && seccionImagenes && botonesContainer) {
+            seccionImagenes.classList.add('visible');
+            botonesContainer.style.display = 'flex';
+        } else if (botonesContainer) {
+            botonesContainer.style.display = 'none';
+            if (seccionImagenes) seccionImagenes.classList.remove('visible');
+        }
+    }
+
+    function validarYMostrarSiguiente(stepIndex) {
+        if (stepIndex !== pasoActual) return;
+
+        let esValido = false;
+
+        switch (stepIndex) {
+            case 0:
+                const sucursalInput = document.getElementById('sucursalIncidencia');
+                esValido = sucursalInput?.dataset.selectedId && sucursalInput.value.trim() !== '';
+                break;
+            case 1:
+                const catInput = document.getElementById('categoriaIncidencia');
+                esValido = catInput?.dataset.selectedId && catInput.value.trim() !== '';
+                break;
+            case 2:
+                esValido = true;
+                break;
+            case 3:
+                esValido = document.getElementById('nivelRiesgo')?.value !== '';
+                break;
+            case 4:
+                esValido = document.getElementById('estadoIncidencia')?.value !== '';
+                break;
+            case 5:
+                const fechaValor = document.getElementById('fechaHoraIncidencia')?.value;
+                if (!fechaValor) {
+                    esValido = false;
+                } else {
+                    const fecha = new Date(fechaValor);
+                    esValido = !isNaN(fecha.getTime()) && fecha <= new Date();
+                }
+                break;
+            case 6:
+                const texto = document.getElementById('detallesIncidencia')?.value.trim() || '';
+                esValido = texto.length >= 10 && texto.length <= 1000;
+                break;
+        }
+
+        if (esValido && pasoActual < totalPasos - 1) {
+            const siguienteIndex = pasoActual + 1;
+            const siguienteCampo = document.querySelector(`.field-group-step[data-step="${siguienteIndex}"]`);
+            if (siguienteCampo) {
+                siguienteCampo.classList.add('visible');
+                pasoActual = siguienteIndex;
+
+                setTimeout(() => {
+                    const nuevoInput = siguienteCampo.querySelector('input, select, textarea');
+                    if (nuevoInput) nuevoInput.focus();
+                }, 100);
+            }
+        }
+
+        verificarBotonesFinales();
+    }
+
+    function configurarEventosSecuenciales() {
+        const sucursalInput = document.getElementById('sucursalIncidencia');
+        if (sucursalInput) {
+            const observer = new MutationObserver(() => validarYMostrarSiguiente(0));
+            observer.observe(sucursalInput, { attributes: true, attributeFilter: ['data-selected-id'] });
+            sucursalInput.addEventListener('blur', () => validarYMostrarSiguiente(0));
+        }
+
+        const categoriaInput = document.getElementById('categoriaIncidencia');
+        if (categoriaInput) {
+            const observer = new MutationObserver(() => validarYMostrarSiguiente(1));
+            observer.observe(categoriaInput, { attributes: true, attributeFilter: ['data-selected-id'] });
+            categoriaInput.addEventListener('blur', () => validarYMostrarSiguiente(1));
+        }
+
+        const subcatSelect = document.getElementById('subcategoriaIncidencia');
+        if (subcatSelect) {
+            subcatSelect.addEventListener('change', () => validarYMostrarSiguiente(2));
+        }
+
+        const riesgoSelect = document.getElementById('nivelRiesgo');
+        if (riesgoSelect) {
+            riesgoSelect.addEventListener('change', () => validarYMostrarSiguiente(3));
+        }
+
+        const estadoSelect = document.getElementById('estadoIncidencia');
+        if (estadoSelect) {
+            estadoSelect.addEventListener('change', () => validarYMostrarSiguiente(4));
+        }
+
+        const fechaInput = document.getElementById('fechaHoraIncidencia');
+        if (fechaInput) {
+            fechaInput.addEventListener('change', () => validarYMostrarSiguiente(5));
+        }
+
+        const detallesTextarea = document.getElementById('detallesIncidencia');
+        if (detallesTextarea) {
+            detallesTextarea.addEventListener('input', () => validarYMostrarSiguiente(6));
+        }
+    }
+
+    configurarEventosSecuenciales();
+    verificarBotonesFinales();
+}
+
+setTimeout(() => {
+    inicializarFormularioSecuencial();
+}, 500);
 
 document.addEventListener('DOMContentLoaded', () => {
     window.crearIncidenciaDebug = { controller: new CrearIncidenciaController() };

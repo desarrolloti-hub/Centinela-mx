@@ -69,6 +69,7 @@ body {
         text-shadow: 0 0 5px var(--color-accent-primary), 0 0 15px var(--color-accent-primary);
         opacity: 0.9;
     }
+
     100% {
         text-shadow: 0 0 15px var(--color-accent-primary), 0 0 30px var(--color-accent-primary), 0 0 45px var(--color-accent-primary);
         opacity: 1;
@@ -131,7 +132,7 @@ body {
     border-radius: var(--border-radius-large) !important;
     box-shadow: var(--shadow-normal) !important;
     margin-bottom: 20px !important;
-    overflow: hidden;
+    overflow: visible !important;
 }
 
 .card-header {
@@ -165,6 +166,7 @@ body {
 
 .card-body {
     padding: 30px !important;
+    overflow: visible !important;
 }
 
 /* =============================================
@@ -202,6 +204,7 @@ body {
     display: grid;
     grid-template-columns: 1fr;
     gap: 20px;
+    overflow: visible !important;
 }
 
 .full-width {
@@ -608,7 +611,7 @@ body {
     padding: 20px;
     background: var(--color-bg-tertiary);
     border-radius: var(--border-radius-medium);
-    border: 2px dashed var(--color-border-light);
+    border: 2px dashed #ffffff !important; /* Cambiado a blanco sólido */
 }
 
 .upload-area {
@@ -618,6 +621,44 @@ body {
     gap: 15px;
 }
 
+/* =============================================
+   EDITOR DE IMÁGENES - MODIFICADO
+   ============================================= */
+.image-upload-section {
+    margin: 20px 0;
+    padding: 20px;
+    background: var(--color-bg-tertiary);
+    border-radius: var(--border-radius-medium);
+    border: 2px dashed #ffffff !important; /* Cambiado a blanco sólido */
+}
+
+/* Asegurar que el borde punteado siempre sea blanco */
+.upload-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Eliminar cualquier cambio de color en hover para el borde punteado */
+.image-upload-section:hover {
+    border-color: #ffffff !important; /* Mantener blanco al hacer hover */
+}
+
+/* Estilos para preview de imágenes - mantener borde original */
+.preview-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: var(--border-radius-small);
+    overflow: hidden;
+    border: 2px solid var(--color-border-light);
+    transition: all 0.3s ease;
+}
+
+.preview-item:hover {
+    border-color: var(--color-accent-primary);
+    transform: scale(1.02);
+}
 .btn-upload {
     background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
     border: 1px solid var(--color-accent-primary);
@@ -905,6 +946,7 @@ body {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -916,6 +958,7 @@ body {
         opacity: 0;
         transform: translateX(-10px);
     }
+
     to {
         opacity: 1;
         transform: translateX(0);
@@ -928,7 +971,7 @@ body {
 .sugerencias-container {
     position: relative;
     width: 100%;
-    z-index: 1000;
+    z-index: 10000;
 }
 
 .sugerencias-lista {
@@ -941,9 +984,9 @@ body {
     border-radius: var(--border-radius-small);
     max-height: 250px;
     overflow-y: auto;
-    box-shadow: var(--shadow-normal);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     margin-top: 5px;
-    z-index: 1000;
+    z-index: 10001;
 }
 
 .sugerencia-item {
@@ -1038,22 +1081,7 @@ body {
     border-color: var(--color-border-light) !important;
 }
 
-.locked::after {
-    content: "🔒 Completa el campo anterior primero";
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 11px;
-    color: var(--color-warning);
-    background: rgba(0, 0, 0, 0.8);
-    padding: 4px 10px;
-    border-radius: 20px;
-    pointer-events: none;
-    z-index: 10;
-    white-space: nowrap;
-    font-family: var(--font-family-secondary);
-}
+
 
 .field-error-shake {
     animation: shakeWarning 0.3s ease;
@@ -1061,78 +1089,152 @@ body {
 }
 
 @keyframes shakeWarning {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-4px); }
-    75% { transform: translateX(4px); }
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-4px);
+    }
+
+    75% {
+        transform: translateX(4px);
+    }
 }
 
 /* =============================================
-   RESPONSIVE
+   CAMPOS SECUENCIALES - APARECEN AL LLENAR
    ============================================= */
-@media (max-width: 1023px) {
-    body {
-        padding-top: 70px;
-    }
-    .custom-container {
-        padding: 20px !important;
-    }
-    .header-section {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 20px !important;
-        padding: 20px !important;
-    }
-    .btn-volver {
-        width: 100% !important;
-        max-width: 300px !important;
-    }
-    .card-body {
-        padding: 20px !important;
-    }
-    .btn {
-        width: 100% !important;
-        margin-bottom: 10px !important;
-    }
-    .action-buttons-container {
-        flex-direction: column !important;
-        gap: 10px !important;
-    }
+
+/* Ocultar todos los campos de steps inicialmente */
+.field-group-step {
+    display: none;
+    position: relative;
+    overflow: visible !important;
 }
 
+/* Campo visible */
+.field-group-step.visible {
+    display: block;
+    animation: fadeInUp 0.3s ease;
+}
+
+/* Asegurar que los botones originales se muestren al final */
+.action-buttons-container {
+    margin-top: 20px;
+}
+
+/* Asegurar que el primer campo tenga z-index alto para las sugerencias */
+.field-group-step[data-step="0"] {
+    position: relative;
+    z-index: 100;
+    overflow: visible !important;
+}
+
+/* Asegurar que el formulario no corte el contenido */
+#formMercanciaPrincipal {
+    overflow: visible !important;
+}
+
+.form-grid {
+    overflow: visible !important;
+}
+
+/* Responsive */
 @media (max-width: 768px) {
-    body {
-        padding: 10px !important;
-        padding-top: 70px !important;
-    }
-    .custom-container {
-        padding: 15px !important;
-    }
-    .main-title {
-        font-size: 20px !important;
-        justify-content: center !important;
-        text-align: center !important;
-    }
-    .images-grid {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    }
-    .monto-input-group {
-        flex-direction: column;
-    }
-    .monto-preview {
-        width: 100%;
+    .sugerencias-lista {
+        max-height: 200px;
+        position: fixed;
+        left: 20px;
+        right: 20px;
+        width: auto;
     }
 }
+/* =============================================
+   SECCIÓN DE IMÁGENES (OCULTA INICIALMENTE)
+   ============================================= */
+.image-upload-section-wrapper {
+    display: none;
+    transition: all 0.3s ease;
+}
 
-@media (max-width: 480px) {
-    body {
-        padding: 8px !important;
-        padding-top: 65px !important;
-    }
-    .images-grid {
-        grid-template-columns: 1fr;
-    }
-    .btn-upload {
-        width: 100%;
-        justify-content: center;
-    }
+.image-upload-section-wrapper.visible {
+    display: block;
+    animation: fadeInUp 0.5s ease;
+}
+/* =============================================
+   BOTONES DE COMPARTIR - ESTILO UNIFICADO
+   ============================================= */
+.btn-compartir {
+    transition: all 0.3s ease !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-compartir:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3) !important;
+}
+
+.btn-compartir#shareWhatsAppBtn:hover {
+    border-color: #25D366 !important;
+    box-shadow: 0 0 15px rgba(37, 211, 102, 0.3) !important;
+}
+
+.btn-compartir#shareWhatsAppBtn:hover i {
+    color: #25D366 !important;
+    text-shadow: 0 0 5px #25D366;
+}
+
+.btn-compartir#shareEmailBtn:hover {
+    border-color: #0077B5 !important;
+    box-shadow: 0 0 15px rgba(0, 119, 181, 0.3) !important;
+}
+
+.btn-compartir#shareEmailBtn:hover i {
+    color: #0077B5 !important;
+    text-shadow: 0 0 5px #0077B5;
+}
+
+.btn-compartir#shareLinkBtn:hover {
+    border-color: var(--color-accent-primary) !important;
+    box-shadow: 0 0 15px rgba(0, 207, 255, 0.3) !important;
+}
+
+.btn-compartir#shareLinkBtn:hover i {
+    color: var(--color-accent-primary) !important;
+    text-shadow: 0 0 5px var(--color-accent-primary);
+}
+
+.btn-compartir#shareCancelBtn:hover {
+    border-color: var(--color-danger) !important;
+    color: var(--color-danger) !important;
+}
+
+.btn-compartir#shareCancelBtn:hover i {
+    color: var(--color-danger) !important;
+}
+
+.btn-compartir::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(to bottom right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.05) 50%,
+            rgba(255, 255, 255, 0) 100%);
+    transform: rotate(30deg);
+    transition: all 0.5s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.btn-compartir:hover::after {
+    opacity: 1;
+    transform: rotate(30deg) translate(10%, 10%);
 }

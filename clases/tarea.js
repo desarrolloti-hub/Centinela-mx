@@ -13,7 +13,8 @@ import {
     where,
     orderBy,
     serverTimestamp,
-    addDoc
+    addDoc,
+    onSnapshot  // asincrono
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 import { db } from '/config/firebase-config.js';
@@ -39,6 +40,10 @@ class Tarea {
         this.usuariosCompartidosIds = data.usuariosCompartidosIds || [];
         this.areaId = data.areaId || '';
         this.cargosIds = data.cargosIds || [];
+
+        // ✅ NUEVO: Categoría y subcategoría
+        this.categoriaId = data.categoriaId || null;
+        this.subcategoriaId = data.subcategoriaId || null;
 
         // Metadatos de usuario
         this.organizacionCamelCase = data.organizacionCamelCase || '';
@@ -224,6 +229,8 @@ class Tarea {
             usuariosCompartidosIds: this.usuariosCompartidosIds,
             areaId: this.areaId,
             cargosIds: this.cargosIds,
+            categoriaId: this.categoriaId,
+            subcategoriaId: this.subcategoriaId,
             organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             creadoPorNombre: this.creadoPorNombre,
@@ -254,6 +261,8 @@ class Tarea {
             usuariosCompartidosIds: this.usuariosCompartidosIds,
             areaId: this.areaId,
             cargosIds: this.cargosIds,
+            categoriaId: this.categoriaId,
+            subcategoriaId: this.subcategoriaId,
             fechaCreacion: this._formatearFecha(this.fechaCreacion),
             fechaCreacionRaw: this.fechaCreacion,
             fechaActualizacion: this._formatearFecha(this.fechaActualizacion),
@@ -311,7 +320,56 @@ class TareaManager {
     _getCollectionName(organizacionCamelCase) {
         return `tareas_${organizacionCamelCase}`;
     }
+// Agrega este método a la clase TareaManager en tarea.js
 
+/**
+ * NUEVO: Suscripción en tiempo real a cambios en las tareas
+ */
+suscribirATareas(organizacionCamelCase, callback) {
+    if (!organizacionCamelCase) return null;
+    
+    const collectionName = this._getCollectionName(organizacionCamelCase);
+    const tareasCollection = collection(db, collectionName);
+    const q = query(tareasCollection, orderBy("fechaCreacion", "desc"));
+    
+    // [MODIFICACIÓN]: Registrar lectura inicial
+    consumo.registrarFirestoreLectura(collectionName, 'suscripcion tiempo real');
+    
+    // Retornar unsubscribe function
+    return onSnapshot(q, async (snapshot) => {
+        const tareasActualizadas = [];
+        
+        snapshot.docChanges().forEach(change => {
+    
+            
+            // Registrar consumo por cada cambio
+            if (change.type === 'modified') {
+                consumo.registrarFirestoreActualizacion(collectionName, change.doc.id);
+            } else if (change.type === 'added') {
+                consumo.registrarFirestoreEscritura(collectionName, change.doc.id);
+            } else if (change.type === 'removed') {
+                consumo.registrarFirestoreEliminacion(collectionName, change.doc.id);
+            }
+        });
+        
+        snapshot.forEach(doc => {
+            try {
+                const tarea = new Tarea(doc.id, doc.data());
+                tareasActualizadas.push(tarea);
+            } catch (error) {
+                console.error('Error procesando tarea:', error);
+            }
+        });
+        
+        this.tareas = tareasActualizadas;
+        
+        if (callback) {
+            callback(tareasActualizadas);
+        }
+    }, (error) => {
+        console.error('Error en suscripción de tareas:', error);
+    });
+}
     // =============================================
     // MÉTODOS CRUD (MEJORADOS)
     // =============================================
@@ -362,6 +420,8 @@ class TareaManager {
                 usuariosCompartidosIds: tareaData.usuariosCompartidosIds || [],
                 areaId: tareaData.areaId || '',
                 cargosIds: tareaData.cargosIds || [],
+                categoriaId: tareaData.categoriaId || null,
+                subcategoriaId: tareaData.subcategoriaId || null,
                 organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
                 creadoPorNombre: usuarioActual.nombreCompleto || usuarioActual.email || 'Usuario',
@@ -712,6 +772,77 @@ class TareaManager {
 
         } catch (error) {
             console.error('Error eliminando tarea:', error);
+            throw error;
+        }
+    }
+
+    async marcarItemTareaConAutor(tareaId, itemId, completado, marcadoPor, marcadoPorNombre, usuarioActual, organizacionCamelCase) {
+        try {
+            const tarea = await this.getTareaById(tareaId, organizacionCamelCase);
+            if (!tarea) throw new Error('Tarea no encontrada');
+
+            // Verificar que el item existe
+            if (!tarea.items[itemId]) throw new Error('Item no encontrado');
+
+            // Actualizar el item
+            tarea.items[itemId].completado = completado;
+            tarea.items[itemId].marcadoPor = marcadoPor;
+            tarea.items[itemId].marcadoPorNombre = marcadoPorNombre;
+            tarea.items[itemId].fechaModificacion = new Date().toISOString();
+
+            tarea._calcularProgreso();
+
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const tareaRef = doc(db, collectionName, tareaId);
+
+            await consumo.registrarFirestoreActualizacion(collectionName, tareaId);
+            
+            await updateDoc(tareaRef, {
+                items: tarea.items,
+                fechaActualizacion: serverTimestamp(),
+                actualizadoPor: usuarioActual.id,
+                actualizadoPorNombre: usuarioActual.nombreCompleto || usuarioActual.email || 'Usuario'
+            });
+
+            return true;
+
+        } catch (error) {
+            console.error('Error marcando item con autor:', error);
+            throw error;
+        }
+    }
+
+
+    async marcarItemTareaConAutor(tareaId, itemId, completado, marcadoPor, marcadoPorNombre, usuarioActual, organizacionCamelCase) {
+        try {
+            const tarea = await this.getTareaById(tareaId, organizacionCamelCase);
+            if (!tarea) throw new Error('Tarea no encontrada');
+
+            if (!tarea.items[itemId]) throw new Error('Item no encontrado');
+
+            tarea.items[itemId].completado = completado;
+            tarea.items[itemId].marcadoPor = marcadoPor;
+            tarea.items[itemId].marcadoPorNombre = marcadoPorNombre;
+            tarea.items[itemId].fechaModificacion = new Date().toISOString();
+
+            tarea._calcularProgreso();
+
+            const collectionName = this._getCollectionName(organizacionCamelCase);
+            const tareaRef = doc(db, collectionName, tareaId);
+
+            await consumo.registrarFirestoreActualizacion(collectionName, tareaId);
+
+            await updateDoc(tareaRef, {
+                items: tarea.items,
+                fechaActualizacion: serverTimestamp(),
+                actualizadoPor: usuarioActual.id,
+                actualizadoPorNombre: usuarioActual.nombreCompleto || usuarioActual.email || 'Usuario'
+            });
+
+            return true;
+
+        } catch (error) {
+            console.error('Error marcando item con autor:', error);
             throw error;
         }
     }

@@ -134,7 +134,19 @@
                 font-size: 14px;
                 transition: var(--transition-default);
             }
-
+            
+            /* Enlace del logo simple */
+            .footer-logo-simple-link {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                text-decoration: none;
+                transition: var(--transition-default);
+            }
+            
+            .footer-logo-simple-link:hover {
+                opacity: 0.8;
+            }
             
             /* Texto "about" */
             .footer-about {
@@ -352,13 +364,13 @@
                         </div>
                         <p class="footer-about">Líderes en soluciones de seguridad electrónica en México.</p>
                         <div class="footer-social">
-                            <a href="" target="_blank" title="Facebook">
+                            <a href="#" target="_blank" title="Facebook">
                                 <i class="fab fa-facebook-f"></i>
                             </a>
-                            <a href="" target="_blank" title="Twitter">
+                            <a href="#" target="_blank" title="Twitter">
                                 <i class="fab fa-twitter"></i>
                             </a>
-                            <a href="" target="_blank" title="LinkedIn">
+                            <a href="#" target="_blank" title="LinkedIn">
                                 <i class="fab fa-linkedin-in"></i>
                             </a>
                         </div>
@@ -368,10 +380,10 @@
                     <div class="footer-col">
                         <h3>Enlaces Rápidos</h3>
                         <ul class="footer-links">
-                            <li><a href="/"><i class="fas fa-chevron-right"></i> Términos y Condiciones</a></li>
-                            <li><a href="/"><i class="fas fa-chevron-right"></i> Política de Privacidad</a></li>
-                            <li><a href="/"><i class="fas fa-chevron-right"></i> Política de Devoluciones</a></li>
-                            <li><a href="/"><i class="fas fa-chevron-right"></i> Proceso de facturación</a></li>
+                            <li><a href="#"><i class="fas fa-chevron-right"></i> Términos y Condiciones</a></li>
+                            <li><a href="#"><i class="fas fa-chevron-right"></i> Política de Privacidad</a></li>
+                            <li><a href="#"><i class="fas fa-chevron-right"></i> Política de Devoluciones</a></li>
+                            <li><a href="#"><i class="fas fa-chevron-right"></i> Proceso de facturación</a></li>
                         </ul>
                     </div>
                     
@@ -379,12 +391,12 @@
                     <div class="footer-col">
                         <h3>Servicios</h3>
                         <ul class="footer-links">
-                            <li><a href="/"><i class="fas fa-chevron-right"></i> Seguridad electrónica</a></li>
-                            <li><a href="/"><i class="fas fa-chevron-right"></i> Multimedia</a></li>
-                            <li><a href="/"><i class="fas fa-chevron-right"></i> Desarrollo de Software</a></li>
-                            <li><a href="/"><i class="fas fa-chevron-right"></i> Acerca de nosotros</a></li>
-                            <li><a href="/"><i class="fas fa-chevron-right"></i> Contacto</a></li>
-                            <li><a href="/"><i class="fas fa-chevron-right"></i> Únete a RSI</a></li>
+                            <li><a href="#"><i class="fas fa-chevron-right"></i> Seguridad electrónica</a></li>
+                            <li><a href="#"><i class="fas fa-chevron-right"></i> Multimedia</a></li>
+                            <li><a href="#"><i class="fas fa-chevron-right"></i> Desarrollo de Software</a></li>
+                            <li><a href="#"><i class="fas fa-chevron-right"></i> Acerca de nosotros</a></li>
+                            <li><a href="#"><i class="fas fa-chevron-right"></i> Contacto</a></li>
+                            <li><a href="#"><i class="fas fa-chevron-right"></i> Únete a RSI</a></li>
                         </ul>
                     </div>
                     
@@ -414,15 +426,17 @@
             <div class="footer-bottom-container">
                 <div class="footer-bottom-content">
                     <div class="footer-logo-simple">
-                            <img src="/assets/images/logoApp.png" alt="Centinela Logo" class="footer-logo-img">
-                            <span>RSI Enterprise.</span>
-                        </div>
+                        <a href="https://rsienterprise.web.app/" target="_blank" rel="noopener noreferrer" class="footer-logo-simple-link">
+                            <img src="/assets/images/logoApp.png" alt="RSI Enterprise Logo" class="footer-logo-simple-img">
+                            <span>RSI Enterprise</span>
+                        </a>
+                    </div>
                     <p class="copyright">
                         © ${new Date().getFullYear()} RSI Enterprise. Todos los derechos reservados.
                     </p>
                     <div class="footer-legal">
-                        <a href="">Política de Privacidad</a>
-                        <a href="">Términos y Condiciones</a>
+                        <a href="#">Política de Privacidad</a>
+                        <a href="#">Términos y Condiciones</a>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,7 @@
 // crearIncidenciasRecuperacion.js - CONTROLADOR COMPLETO
-// ESTRUCTURA IDÉNTICA A crearIncidencias.js PERO PARA MERCANCÍA PERDIDA
-// CON GENERACIÓN AUTOMÁTICA DE PDF
+// VERSIÓN OPTIMIZADA CON VISTA PREVIA DE PDF QUE SE SUBA DIRECTAMENTE
+// SIN DEPENDENCIA DE manejadorPDFSegundoPlano.js
+// AGREGADO: Drag & Drop y Ctrl+V para imágenes
 
 const LIMITES = {
     NARRACION_EVENTOS: 2000,
@@ -12,16 +13,89 @@ class CrearMercanciaPerdidaController {
         this.mercanciaManager = null;
         this.usuarioActual = null;
         this.empresas = [];
+        this.sucursalesLista = [];
+        this.sucursalSeleccionada = null;
         this.imagenesSeleccionadas = [];
         this.imageEditorModal = null;
         this.loadingOverlay = null;
         this.flatpickrInstance = null;
         this.historialManager = null;
-        
+
         this.pdfGenerator = null;
         this.isInitialized = false;
 
+        this.pdfBlobGenerado = null;
+        this.datosActuales = null;
+
         this._init();
+    }
+
+    // =============================================
+    // NUEVO: Drag & Drop y Ctrl+V para imágenes
+    // =============================================
+    _configurarDragAndDropYPegado() {
+        const uploadArea = document.querySelector('.image-upload-section');
+
+        if (!uploadArea) return;
+
+        // DRAG & DROP - Arrastrar imágenes
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.style.borderColor = 'var(--color-accent-secondary)';
+            uploadArea.style.background = 'rgba(0, 207, 255, 0.05)';
+        });
+
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.style.borderColor = 'var(--color-border-light)';
+            uploadArea.style.background = '';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.style.borderColor = 'var(--color-border-light)';
+            uploadArea.style.background = '';
+
+            const files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+                if (imageFiles.length > 0) {
+                    this._procesarImagenes(imageFiles);
+                    this._mostrarNotificacion(`${imageFiles.length} imagen(es) agregadas por arrastre`, 'success', 2000);
+                } else {
+                    this._mostrarNotificacion('Solo se permiten archivos de imagen', 'warning', 2000);
+                }
+            }
+        });
+
+        // CTRL+V - Pegar imágenes desde portapapeles
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData.items;
+            const imageFiles = [];
+
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if (item.type.indexOf('image') !== -1) {
+                    const file = item.getAsFile();
+                    if (file) {
+                        const timestamp = Date.now();
+                        const random = Math.random().toString(36).substring(2, 8);
+                        const extension = file.type.split('/')[1] || 'png';
+                        const newFile = new File([file], `pegado_${timestamp}_${random}.${extension}`, { type: file.type });
+                        imageFiles.push(newFile);
+                    }
+                }
+            }
+
+            if (imageFiles.length > 0) {
+                e.preventDefault();
+                this._procesarImagenes(imageFiles);
+                this._mostrarNotificacion(`${imageFiles.length} imagen(es) pegadas desde portapapeles`, 'success', 2000);
+            }
+        });
     }
 
     async _initHistorialManager() {
@@ -30,27 +104,120 @@ class CrearMercanciaPerdidaController {
                 const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
                 this.historialManager = new HistorialUsuarioManager();
             } catch (error) {
-                console.error('Error inicializando historialManager:', error);
+                // Error silencioso
             }
         }
         return this.historialManager;
     }
 
-        async _initPDFGenerator() {
-            if (!this.pdfGenerator) {
-                try {
-                    // ✅ Ruta correcta (misma carpeta)
-                    const { generadorMercanciaPDF } = await import('/components/mercanciaPDF.js');
-                    this.pdfGenerator = generadorMercanciaPDF;
-                    console.log('✅ PDFGenerator inicializado correctamente');
-                    return true;
-                } catch (error) {
-                    console.error('Error inicializando PDFGenerator:', error);
-                    return false;
-                }
+    async _initPDFGenerator() {
+        if (!this.pdfGenerator) {
+            try {
+                const { generadorMercanciaPDF } = await import('/components/mercanciaPDF.js');
+                this.pdfGenerator = generadorMercanciaPDF;
+                return true;
+            } catch (error) {
+                return false;
             }
-            return true;
         }
+        return true;
+    }
+
+    // =============================================
+    // ABRIR PDF EN NUEVA PESTAÑA
+    // =============================================
+    async _abrirPDFEnNuevaPestana(datos) {
+        try {
+            Swal.fire({
+                title: 'Generando PDF...',
+                text: 'Preparando el reporte, esto puede tomar unos segundos',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            this.datosActuales = datos;
+
+            const registroTemporal = this._crearRegistroTemporal(datos);
+
+            const pdfBlob = await this.pdfGenerator.generarReporte(registroTemporal, {
+                mostrarAlerta: false,
+                returnBlob: true,
+                diagnosticar: false
+            });
+
+            if (!pdfBlob || pdfBlob.size === 0) {
+                throw new Error('El PDF generado está vacío');
+            }
+
+            this.pdfBlobGenerado = pdfBlob;
+
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            window.open(pdfUrl, '_blank');
+
+            setTimeout(() => {
+                URL.revokeObjectURL(pdfUrl);
+            }, 10000);
+
+            Swal.close();
+
+        } catch (error) {
+            Swal.close();
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al generar PDF',
+                text: error.message || 'No se pudo generar el reporte',
+                footer: 'Por favor, verifica tu conexión y las imágenes seleccionadas.'
+            });
+        }
+    }
+
+    // =============================================
+    // CREAR REGISTRO TEMPORAL CON SUCURSAL COMPLETA
+    // =============================================
+    _crearRegistroTemporal(datos) {
+        const fechaObj = new Date(datos.fechaHora);
+
+        const evidenciasProcesadas = datos.imagenes.map((img, index) => {
+            return {
+                id: `temp_${Date.now()}_${index}`,
+                file: img.file,
+                preview: img.preview,
+                url: img.preview,
+                comentario: img.comentario || '',
+                elementos: img.elementos || [],
+                generatedName: img.generatedName
+            };
+        });
+
+        return {
+            id: `PDF extravio`,
+            nombreEmpresaCC: datos.nombreEmpresaCC,
+            tipoEvento: datos.tipoEvento,
+            montoPerdido: datos.montoPerdido,
+            montoRecuperado: datos.montoRecuperado,
+            fecha: fechaObj,
+            hora: fechaObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+            narracionEventos: datos.narracionEventos,
+            detallesPerdida: datos.detallesPerdida,
+            reportadoPorNombre: this.usuarioActual.nombreCompleto,
+            evidencias: evidenciasProcesadas,
+            estado: 'activo',
+            sucursalInfo: this.sucursalSeleccionada,
+            getMontoNeto: () => datos.montoPerdido - (datos.montoRecuperado || 0),
+            getPorcentajeRecuperado: () => datos.montoPerdido > 0 ? ((datos.montoRecuperado || 0) / datos.montoPerdido) * 100 : 0,
+            getEstadoTexto: () => 'Activo',
+            getTipoEventoTexto: () => this._getTipoEventoTexto(datos.tipoEvento)
+        };
+    }
+
+    // =============================================
+    // MÉTODOS EXISTENTES
+    // =============================================
+
     async _init() {
         try {
             this._cargarUsuario();
@@ -59,16 +226,10 @@ class CrearMercanciaPerdidaController {
                 throw new Error('No se pudo cargar información del usuario');
             }
 
-            console.log('👤 Usuario cargado:', this.usuarioActual);
-
             await this._inicializarManager();
             await this._cargarEmpresas();
-            
+
             const pdfOk = await this._initPDFGenerator();
-            
-            if (!pdfOk) {
-                console.warn('⚠️ PDFGenerator no disponible, no se generará PDF automático');
-            }
 
             this._configurarOrganizacion();
             this._inicializarDateTimePicker();
@@ -77,20 +238,19 @@ class CrearMercanciaPerdidaController {
             this._configurarMontoPreview();
 
             this.imageEditorModal = new window.ImageEditorModal();
+
             this.isInitialized = true;
 
         } catch (error) {
-            console.error('Error inicializando:', error);
             this._mostrarError('Error al inicializar: ' + error.message);
         }
     }
 
     async _inicializarManager() {
         try {
-            const { MercanciaPerdidaManager } = await import('/clases/mercanciaPerdida.js');
+            const { MercanciaPerdidaManager } = await import('/clases/incidenciaRecuperacion.js');
             this.mercanciaManager = new MercanciaPerdidaManager();
         } catch (error) {
-            console.error('Error cargando MercanciaPerdidaManager:', error);
             throw error;
         }
     }
@@ -135,12 +295,10 @@ class CrearMercanciaPerdidaController {
                     }
                 });
             } catch (error) {
-                console.error('Error inicializando Flatpickr:', error);
                 fechaInput.type = 'datetime-local';
                 fechaInput.max = this._formatearFechaParaInput(new Date());
             }
         } else {
-            console.warn('Flatpickr no está disponible, usando input nativo');
             const fechaInput = document.getElementById('fechaHoraEvento');
             if (fechaInput) {
                 fechaInput.type = 'datetime-local';
@@ -158,6 +316,9 @@ class CrearMercanciaPerdidaController {
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     }
 
+    // =============================================
+    // CARGAR SUCURSALES (GUARDAR LISTA COMPLETA)
+    // =============================================
     async _cargarEmpresas() {
         try {
             const { SucursalManager } = await import('/clases/sucursal.js');
@@ -167,12 +328,13 @@ class CrearMercanciaPerdidaController {
                 this.usuarioActual.organizacionCamelCase
             );
 
+            this.sucursalesLista = sucursales;
             this.empresas = sucursales.map(s => s.nombre);
             this.empresas = [...new Set(this.empresas)];
 
         } catch (error) {
-            console.error('Error cargando empresas:', error);
             this.empresas = [];
+            this.sucursalesLista = [];
         }
     }
 
@@ -219,7 +381,6 @@ class CrearMercanciaPerdidaController {
             };
 
         } catch (error) {
-            console.error('Error cargando usuario:', error);
             throw error;
         }
     }
@@ -311,7 +472,7 @@ class CrearMercanciaPerdidaController {
 
             document.getElementById('btnCrearRegistro')?.addEventListener('click', (e) => {
                 e.preventDefault();
-                this._validarYGuardar();
+                this._validarYMostrarOpciones();
             });
 
             document.getElementById('btnAgregarImagen')?.addEventListener('click', () => {
@@ -322,16 +483,207 @@ class CrearMercanciaPerdidaController {
 
             document.getElementById('formMercanciaPrincipal')?.addEventListener('submit', (e) => {
                 e.preventDefault();
-                this._validarYGuardar();
+                this._validarYMostrarOpciones();
             });
 
             this._configurarSugerencias();
+            this._configurarValidacionSecuencial();
+            this._configurarVisibilidadImagenes();
+
+            // ========== NUEVO: Configurar Drag & Drop y Ctrl+V ==========
+            this._configurarDragAndDropYPegado();
+            // ============================================================
 
         } catch (error) {
-            console.error('Error configurando eventos:', error);
+            // Error silencioso
         }
     }
 
+    _configurarValidacionSecuencial() {
+        const ordenCampos = [
+            { id: 'nombreEmpresaCC', siguiente: 'tipoEvento', validar: (valor) => valor.trim() !== '' },
+            { id: 'tipoEvento', siguiente: 'montoPerdido', validar: (valor) => valor !== '' },
+            {
+                id: 'montoPerdido', siguiente: 'montoRecuperado', validar: (valor) => {
+                    const monto = parseFloat(valor);
+                    return !isNaN(monto) && monto > 0;
+                }
+            },
+            { id: 'montoRecuperado', siguiente: 'fechaHoraEvento', validar: (valor) => true },
+            { id: 'fechaHoraEvento', siguiente: 'narracionEventos', validar: (valor) => valor.trim() !== '' },
+            {
+                id: 'narracionEventos', siguiente: 'detallesPerdida', validar: (valor) => {
+                    const texto = valor.trim();
+                    return texto.length >= 10 && texto.length <= LIMITES.NARRACION_EVENTOS;
+                }
+            },
+            { id: 'detallesPerdida', siguiente: null, validar: (valor) => true }
+        ];
+
+        ordenCampos.forEach((campo, index) => {
+            const elemento = document.getElementById(campo.id);
+            if (!elemento) return;
+
+            elemento._validacionSecuencial = {
+                siguienteId: campo.siguiente,
+                validar: campo.validar,
+                indice: index
+            };
+
+            if (index === 0) {
+                this._habilitarCampo(elemento);
+            } else {
+                this._deshabilitarCampo(elemento);
+            }
+
+            elemento.addEventListener('change', () => {
+                this._validarYHabilitarSiguiente(campo.id);
+            });
+
+            if (elemento.tagName === 'INPUT' || elemento.tagName === 'TEXTAREA') {
+                elemento.addEventListener('blur', () => {
+                    this._validarYHabilitarSiguiente(campo.id);
+                });
+            }
+        });
+
+        const fechaInput = document.getElementById('fechaHoraEvento');
+        if (fechaInput && this.flatpickrInstance) {
+            this.flatpickrInstance.config.onClose = (selectedDates, dateStr, instance) => {
+                if (selectedDates.length > 0) {
+                    this._validarYHabilitarSiguiente('fechaHoraEvento');
+                }
+            };
+        }
+    }
+
+    _configurarVisibilidadImagenes() {
+        const detallesInput = document.getElementById('detallesPerdida');
+        const seccionImagenes = document.getElementById('seccionImagenesWrapper');
+
+        if (!detallesInput || !seccionImagenes) return;
+
+        const verificarMostrarSeccion = () => {
+            const valorDetalles = detallesInput.value.trim();
+
+            if (valorDetalles.length > 0) {
+                if (!seccionImagenes.classList.contains('visible')) {
+                    seccionImagenes.classList.add('visible');
+                    setTimeout(() => {
+                        seccionImagenes.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 300);
+                }
+            } else {
+                seccionImagenes.classList.remove('visible');
+            }
+        };
+
+        detallesInput.addEventListener('input', verificarMostrarSeccion);
+        verificarMostrarSeccion();
+    }
+
+    _habilitarCampo(elemento) {
+        if (!elemento) return;
+        elemento.disabled = false;
+        elemento.classList.remove('locked');
+
+        if (elemento.tagName === 'SELECT') {
+            elemento.disabled = false;
+        }
+
+        if (elemento.tagName === 'INPUT') {
+            elemento.readOnly = false;
+        }
+
+        if (elemento.tagName === 'TEXTAREA') {
+            elemento.readOnly = false;
+        }
+
+        const parent = elemento.closest('.form-field, .full-width, .input-group');
+        if (parent) {
+            parent.classList.remove('locked');
+        }
+    }
+
+    _deshabilitarCampo(elemento) {
+        if (!elemento) return;
+        elemento.disabled = true;
+
+        if (elemento.tagName === 'SELECT') {
+            elemento.disabled = true;
+        }
+
+        if (elemento.tagName === 'INPUT') {
+            elemento.readOnly = true;
+        }
+
+        if (elemento.tagName === 'TEXTAREA') {
+            elemento.readOnly = true;
+        }
+
+        const parent = elemento.closest('.form-field, .full-width, .input-group');
+        if (parent) {
+            parent.classList.add('locked');
+        }
+    }
+
+    _validarYHabilitarSiguiente(campoId) {
+        const campo = document.getElementById(campoId);
+        if (!campo) return;
+
+        const config = campo._validacionSecuencial;
+        if (!config) return;
+
+        let valor = campo.value;
+
+        if (campo.tagName === 'SELECT') {
+            valor = campo.value;
+        }
+
+        const esValido = config.validar(valor);
+
+        if (!esValido && valor !== '' && valor !== null) {
+            campo.classList.add('field-error-shake');
+            setTimeout(() => campo.classList.remove('field-error-shake'), 500);
+        }
+
+        if (esValido && config.siguienteId) {
+            const siguienteCampo = document.getElementById(config.siguienteId);
+            if (siguienteCampo && siguienteCampo.disabled) {
+                this._habilitarCampo(siguienteCampo);
+            }
+        }
+
+        if (!esValido && config.siguienteId) {
+            this._deshabilitarCamposSiguientes(config.siguienteId);
+        }
+    }
+
+    _deshabilitarCamposSiguientes(campoId) {
+        const ordenCampos = [
+            'nombreEmpresaCC',
+            'tipoEvento',
+            'montoPerdido',
+            'montoRecuperado',
+            'fechaHoraEvento',
+            'narracionEventos',
+            'detallesPerdida'
+        ];
+
+        const indiceActual = ordenCampos.indexOf(campoId);
+        if (indiceActual === -1) return;
+
+        for (let i = indiceActual; i < ordenCampos.length; i++) {
+            const campo = document.getElementById(ordenCampos[i]);
+            if (campo && !campo.disabled && i !== 0) {
+                this._deshabilitarCampo(campo);
+            }
+        }
+    }
+
+    // =============================================
+    // CONFIGURAR SUGERENCIAS CON SUCURSAL COMPLETA
+    // =============================================
     _configurarSugerencias() {
         const inputEmpresa = document.getElementById('nombreEmpresaCC');
 
@@ -413,35 +765,66 @@ class CrearMercanciaPerdidaController {
         });
     }
 
+    // =============================================
+    // SELECCIONAR EMPRESA (GUARDAR SUCURSAL COMPLETA)
+    // =============================================
     _seleccionarEmpresa(nombre) {
         const input = document.getElementById('nombreEmpresaCC');
         input.value = nombre;
         input.dataset.selectedName = nombre;
 
+        const sucursalEncontrada = this.sucursalesLista?.find(s => s.nombre === nombre);
+
+        if (sucursalEncontrada) {
+            this.sucursalSeleccionada = sucursalEncontrada;
+        } else {
+            this.sucursalSeleccionada = null;
+        }
+
         document.getElementById('sugerenciasEmpresa').innerHTML = '';
+        input.dispatchEvent(new Event('change'));
     }
 
     _procesarImagenes(files) {
         if (!files || files.length === 0) return;
 
         const nuevosArchivos = Array.from(files);
-        const maxSize = 5 * 1024 * 1024;
+        const maxSize = 10 * 1024 * 1024;
+        const maxImages = 20;
+
+        if (this.imagenesSeleccionadas.length + nuevosArchivos.length > maxImages) {
+            this._mostrarError(`Máximo ${maxImages} imágenes permitidas`);
+            return;
+        }
 
         const archivosValidos = nuevosArchivos.filter(file => {
             if (file.size > maxSize) {
-                this._mostrarNotificacion(`La imagen ${file.name} excede 5MB`, 'warning');
+                this._mostrarNotificacion(`La imagen ${file.name} excede 10MB`, 'warning');
                 return false;
             }
+
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+            if (!validTypes.includes(file.type)) {
+                this._mostrarNotificacion(`Formato no válido: ${file.name}. Usa JPG, PNG, GIF o WEBP`, 'warning');
+                return false;
+            }
+
             return true;
         });
 
         archivosValidos.forEach(file => {
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2, 8);
+            const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+            const generatedName = `${timestamp}_${random}_${cleanFileName}`;
+
             this.imagenesSeleccionadas.push({
                 file: file,
                 preview: URL.createObjectURL(file),
                 comentario: '',
                 elementos: [],
-                edited: false
+                edited: false,
+                generatedName: generatedName
             });
         });
 
@@ -550,7 +933,10 @@ class CrearMercanciaPerdidaController {
         });
     }
 
-    _validarYGuardar() {
+    // =============================================
+    // VALIDAR Y MOSTRAR OPCIONES (VERSIÓN SIMPLIFICADA)
+    // =============================================
+    async _validarYMostrarOpciones() {
         const empresaInput = document.getElementById('nombreEmpresaCC');
         const nombreEmpresaCC = empresaInput.value.trim();
 
@@ -617,8 +1003,6 @@ class CrearMercanciaPerdidaController {
         narracionInput.classList.remove('is-invalid');
 
         const detallesPerdida = document.getElementById('detallesPerdida').value.trim();
-        const ubicacion = document.getElementById('ubicacion').value.trim();
-        const responsableAsignado = document.getElementById('responsableAsignado').value.trim();
 
         const datos = {
             nombreEmpresaCC,
@@ -628,170 +1012,37 @@ class CrearMercanciaPerdidaController {
             fechaHora,
             narracionEventos,
             detallesPerdida,
-            ubicacion,
-            responsableAsignado,
             imagenes: this.imagenesSeleccionadas
         };
 
-        this._confirmarYGuardar(datos);
-    }
-
-    async _confirmarYGuardar(datos) {
-        const perdidoFormateado = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(datos.montoPerdido);
-        const recuperadoFormateado = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(datos.montoRecuperado);
-
-        const confirmResult = await Swal.fire({
-            title: '¿Registrar evento?',
+        const result = await Swal.fire({
+            title: 'Confirmar registro',
             html: `
-                <div style="text-align: left;">
-                    <p><strong>Empresa/CC:</strong> ${this._escapeHTML(datos.nombreEmpresaCC)}</p>
-                    <p><strong>Tipo:</strong> ${this._getTipoEventoTexto(datos.tipoEvento)}</p>
-                    <p><strong>Monto Perdido:</strong> ${perdidoFormateado}</p>
-                    <p><strong>Monto Recuperado:</strong> ${recuperadoFormateado}</p>
-                    <p><strong>Fecha:</strong> ${new Date(datos.fechaHora).toLocaleString()}</p>
-                    <p><strong>Evidencias:</strong> ${datos.imagenes.length}</p>
-                </div>
-            `,
+            <div style="text-align: left;">
+                <p><strong><i class="fas fa-store"></i> Empresa:</strong> ${this._escapeHTML(nombreEmpresaCC)}</p>
+                <p><strong><i class="fas fa-exclamation-triangle"></i> Tipo:</strong> ${this._getTipoEventoTexto(tipoEvento)}</p>
+                <p><strong><i class="fas fa-dollar-sign"></i> Monto:</strong> $${montoPerdido.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                <p><strong><i class="fas fa-images"></i> Evidencias:</strong> ${this.imagenesSeleccionadas.length} imagen(es)</p>
+                <p><strong><i class="fas fa-file-pdf"></i> PDF:</strong> Se descargará automáticamente al confirmar</p>
+            </div>
+        `,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'REGISTRAR EVENTO',
-            cancelButtonText: 'CANCELAR',
+            confirmButtonText: '<i class="fas fa-check-circle"></i> Confirmar',
+            cancelButtonText: '<i class="fas fa-times"></i> Cancelar',
             confirmButtonColor: '#28a745',
-            reverseButtons: false
+            cancelButtonColor: '#6c757d'
         });
 
-        if (confirmResult.isConfirmed) {
-            await this._guardarRegistro(datos);
-        }
-    }
-
-    _getTipoEventoTexto(tipo) {
-        const tipos = {
-            'robo': 'Robo',
-            'extravio': 'Extravío',
-            'accidente': 'Accidente',
-            'otro': 'Otro'
-        };
-        return tipos[tipo] || tipo;
-    }
-
-    // =============================================
-    // SUBIDA DE EVIDENCIAS (usando MercanciaPerdidaManager)
-    // =============================================
-    async _subirEvidencias(registroId, imagenes) {
-        if (!imagenes || imagenes.length === 0) return [];
-        
-        const resultados = [];
-        
-        for (let i = 0; i < imagenes.length; i++) {
-            const img = imagenes[i];
-            const comentario = img.comentario || '';
-            
-            const timestamp = Date.now();
-            const random = Math.random().toString(36).substring(2, 8);
-            const nombreArchivo = `${timestamp}_${random}_${img.file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-            const rutaStorage = `mercancia_perdida_${this.usuarioActual.organizacionCamelCase}/${registroId}/evidencias/${nombreArchivo}`;
-            
-            try {
-                console.log(`📤 Subiendo evidencia ${i + 1}/${imagenes.length}: ${rutaStorage}`);
-                const resultado = await this.mercanciaManager.subirArchivo(img.file, rutaStorage);
-                
-                resultados.push({
-                    id: `EVD${Date.now()}_${i}_${random}`,
-                    url: resultado.url,
-                    comentario: comentario,
-                    fechaAgregada: new Date()
-                });
-                console.log(`✅ Evidencia ${i + 1} subida correctamente`);
-            } catch (error) {
-                console.error(`❌ Error subiendo evidencia ${i + 1}:`, error);
-            }
-        }
-        
-        return resultados;
-    }
-
-    // =============================================
-    // GENERACIÓN AUTOMÁTICA DE PDF (igual que incidencias)
-    // =============================================
-    async _generarYSubirPDF(registro) {
-        try {
-            console.log('📄 Iniciando generación automática de PDF para:', registro.id);
-
-            if (!this.pdfGenerator) {
-                console.error('❌ PDFGenerator no disponible');
-                return false;
-            }
-
-            // Configurar el generador (igual que en incidencias)
-            this.pdfGenerator.configurar({
-                organizacionActual: {
-                    nombre: this.usuarioActual.organizacion,
-                    camelCase: this.usuarioActual.organizacionCamelCase,
-                    logoUrl: localStorage.getItem('organizacionLogo') || null
-                },
-                empresasCache: this.empresas,
-                authToken: localStorage.getItem('authToken')
-            });
-
-            // Esperar un momento para asegurar que todo esté listo
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Recargar el registro actualizado
-            const registroActualizado = await this.mercanciaManager.getRegistroById(
-                registro.id,
-                this.usuarioActual.organizacionCamelCase
-            );
-
-            if (!registroActualizado) {
-                throw new Error('No se pudo recargar el registro');
-            }
-
-            // Generar PDF como blob (sin mostrar alerta)
-            const pdfBlob = await this.pdfGenerator.generarReporte(registroActualizado, {
-                mostrarAlerta: false,
-                returnBlob: true
-            });
-
-            if (!pdfBlob || pdfBlob.size === 0) {
-                throw new Error('El PDF generado está vacío');
-            }
-
-            console.log(`📦 PDF generado: ${pdfBlob.size} bytes`);
-
-            // Subir PDF a Storage
-            const pdfFile = new File([pdfBlob], `reporte_${registro.id}.pdf`, { type: 'application/pdf' });
-            const rutaPDF = `mercancia_perdida_${this.usuarioActual.organizacionCamelCase}/${registro.id}/reporte_${registro.id}.pdf`;
-
-            const resultado = await this.mercanciaManager.subirArchivo(pdfFile, rutaPDF);
-
-            // Actualizar registro con URL del PDF
-            const { doc, updateDoc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js");
-            const { db } = await import('/config/firebase-config.js');
-
-            const collectionName = `mercancia_perdida_${this.usuarioActual.organizacionCamelCase}`;
-            const registroRef = doc(db, collectionName, registro.id);
-
-            await updateDoc(registroRef, {
-                pdfUrl: resultado.url,
-                fechaActualizacion: serverTimestamp(),
-                actualizadoPor: this.usuarioActual.id,
-                actualizadoPorNombre: this.usuarioActual.nombreCompleto
-            });
-
-            console.log('✅ PDF subido exitosamente:', resultado.url);
-            return true;
-
-        } catch (error) {
-            console.error('❌ Error generando PDF automático:', error);
-            return false;
+        if (result.isConfirmed) {
+            await this._guardarYDescargarPDF(datos);
         }
     }
 
     // =============================================
-    // GUARDAR REGISTRO COMPLETO (igual estructura que incidencias)
+    // GUARDAR REGISTRO Y DESCARGAR PDF AUTOMÁTICAMENTE
     // =============================================
-    async _guardarRegistro(datos) {
+    async _guardarYDescargarPDF(datos) {
         const btnCrear = document.getElementById('btnCrearRegistro');
         const originalHTML = btnCrear ? btnCrear.innerHTML : '<i class="fas fa-check me-2"></i>Registrar Evento';
 
@@ -804,8 +1055,8 @@ class CrearMercanciaPerdidaController {
             }
 
             Swal.fire({
-                title: 'Registrando evento...',
-                text: 'Por favor espere, esto puede tomar unos segundos.',
+                title: 'Guardando registro...',
+                text: 'Generando reporte y subiendo evidencias...',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
                 showConfirmButton: false,
@@ -817,6 +1068,17 @@ class CrearMercanciaPerdidaController {
             const fechaObj = new Date(datos.fechaHora);
             const hora = fechaObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 
+            const registroTemporal = this._crearRegistroTemporal(datos);
+            const pdfBlob = await this.pdfGenerator.generarReporte(registroTemporal, {
+                mostrarAlerta: false,
+                returnBlob: true,
+                diagnosticar: false
+            });
+
+            if (!pdfBlob || pdfBlob.size === 0) {
+                throw new Error('No se pudo generar el PDF');
+            }
+
             const registroData = {
                 nombreEmpresaCC: datos.nombreEmpresaCC,
                 tipoEvento: datos.tipoEvento,
@@ -826,18 +1088,16 @@ class CrearMercanciaPerdidaController {
                 hora: hora,
                 narracionEventos: datos.narracionEventos,
                 detallesPerdida: datos.detallesPerdida,
-                ubicacion: datos.ubicacion,
-                responsableAsignado: datos.responsableAsignado,
                 reportadoPorId: this.usuarioActual.id,
-                reportadoPorNombre: this.usuarioActual.nombreCompleto
+                reportadoPorNombre: this.usuarioActual.nombreCompleto,
+                sucursalInfo: this.sucursalSeleccionada
             };
 
-            // Crear registro en Firestore (sin imágenes por ahora)
             const nuevoRegistro = await this.mercanciaManager.crearRegistro(
                 registroData,
                 this.usuarioActual,
-                [], // archivos vacíos
-                []  // comentarios vacíos
+                [],
+                []
             );
 
             registroId = nuevoRegistro.id;
@@ -847,10 +1107,8 @@ class CrearMercanciaPerdidaController {
                 text: `Subiendo ${datos.imagenes.length} evidencias...`
             });
 
-            // Subir evidencias
             const evidenciasUrls = await this._subirEvidencias(registroId, datos.imagenes);
 
-            // Actualizar registro con las URLs de las evidencias
             if (evidenciasUrls.length > 0) {
                 await this.mercanciaManager.actualizarRegistro(
                     registroId,
@@ -862,73 +1120,83 @@ class CrearMercanciaPerdidaController {
             }
 
             Swal.update({
-                title: 'Generando reporte PDF...',
-                text: 'Creando el documento PDF...',
-                html: `
-                    <div class="progress-container" style="width:100%; margin-top:10px;">
-                        <div class="progress-bar" style="width:0%; height:4px; background:linear-gradient(90deg, #1a3b5d, #c9a03d); border-radius:2px; transition:width 0.3s;"></div>
-                        <p class="progress-text" style="margin-top:10px; font-size:12px; color:#666;">Preparando PDF...</p>
-                    </div>
-                `,
-                showConfirmButton: false
+                title: 'Subiendo PDF...',
+                text: 'Guardando el reporte PDF...'
             });
 
-            // Recargar registro actualizado
-            const registroActualizado = await this.mercanciaManager.getRegistroById(
+            const pdfFile = new File([pdfBlob], `reporte_${registroId}.pdf`, { type: 'application/pdf' });
+            const rutaPDF = `mercancia_perdida_${this.usuarioActual.organizacionCamelCase}/${registroId}/pdf/reporte_${registroId}.pdf`;
+
+            const resultado = await this.mercanciaManager.subirArchivo(pdfFile, rutaPDF);
+
+            await this.mercanciaManager.actualizarEstadoPDF(
                 registroId,
-                this.usuarioActual.organizacionCamelCase
+                'completado',
+                resultado.url,
+                this.usuarioActual.organizacionCamelCase,
+                this.usuarioActual
             );
 
-            // Generar y subir PDF automáticamente (igual que en incidencias)
-            const pdfGenerado = await this._generarYSubirPDF(registroActualizado);
+            // 🔽 DESCARGAR PDF AUTOMÁTICAMENTE 🔽
+                        // 🔽 SUBIR PDF A STORAGE Y LUEGO MOSTRAR DIÁLOGO PARA COMPARTIR 🔽
+                let pdfStorageUrl = resultado.url; // La URL que ya tienes del storage
 
-            Swal.close();
+                Swal.close();
 
-            // Registrar en historial
-            const historial = await this._initHistorialManager();
+                // Mostrar diálogo para compartir
+                const accionCompartir = await this._mostrarDialogoCompartir(pdfStorageUrl, datos);
+
+                // También descargar el PDF localmente (opcional)
+                const pdfUrlLocal = URL.createObjectURL(pdfBlob);
+                const link = document.createElement('a');
+                link.href = pdfUrlLocal;
+                link.download = `reporte_${registroId}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(pdfUrlLocal), 1000);
+
+                const historial = await this._initHistorialManager();
+
             if (historial) {
                 await historial.registrarActividad({
                     usuario: this.usuarioActual,
                     tipo: 'crear',
                     modulo: 'mercancia_perdida',
-                    descripcion: `Registró mercancía perdida - ${datos.nombreEmpresaCC} - $${datos.montoPerdido}`,
+                    descripcion: `Registró mercancía perdida - ${datos.nombreEmpresaCC}`,
                     detalles: {
                         registroId,
                         nombreEmpresaCC: datos.nombreEmpresaCC,
                         montoPerdido: datos.montoPerdido,
                         tipoEvento: datos.tipoEvento,
-                        totalEvidencias: evidenciasUrls.length,
-                        pdfGenerado: pdfGenerado
+                        totalEvidencias: evidenciasUrls.length
                     }
                 });
             }
 
-            const mensajePDF = pdfGenerado ? ' y su reporte PDF' : '';
             await Swal.fire({
                 icon: 'success',
-                title: '¡Evento registrado!',
-                text: `El registro de ${datos.nombreEmpresaCC}${mensajePDF} se ha guardado correctamente.`,
-                confirmButtonText: 'Ver registros',
+                title: '¡Incidencia creada!',
+                text: 'Se creó correctamente la incidencia y se descargó el PDF',
+                confirmButtonText: 'Aceptar',
                 confirmButtonColor: '#28a745'
             });
 
             this._volverALista();
 
         } catch (error) {
-            console.error('Error guardando registro:', error);
             Swal.close();
-            
-            // Limpiar si hay error
+
             if (registroId) {
                 try {
                     const rutaStorage = `mercancia_perdida_${this.usuarioActual.organizacionCamelCase}/${registroId}`;
                     await this.mercanciaManager.eliminarCarpetaStorage(rutaStorage);
                     await this.mercanciaManager.eliminarRegistro(registroId, this.usuarioActual.organizacionCamelCase, false);
                 } catch (cleanupError) {
-                    console.error('Error limpiando después de fallo:', cleanupError);
+                    // Error silencioso
                 }
             }
-            
+
             this._mostrarError(error.message || 'No se pudo registrar el evento');
         } finally {
             if (btnCrear) {
@@ -937,6 +1205,177 @@ class CrearMercanciaPerdidaController {
             }
         }
     }
+    async _mostrarDialogoCompartir(pdfUrl, datos) {
+    return new Promise((resolve) => {
+        Swal.fire({
+            title: 'Compartir reporte',
+            html: `
+                <div style="text-align: center;">
+                    <i class="fas fa-file-pdf" style="font-size: 48px; color: #e74c3c; margin-bottom: 15px; display: inline-block;"></i>
+                    <p style="margin-bottom: 20px;">El PDF se ha generado correctamente</p>
+                    <p style="font-size: 13px; color: #aaa; margin-bottom: 20px;">¿Como deseas compartirlo?</p>
+                    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
+                        <button id="shareWhatsAppBtn" class="btn-compartir" style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a); border: 1px solid #25D366; border-radius: 8px; padding: 12px; color: white; font-weight: 600; font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; transition: all 0.3s ease;">
+                            <i class="fab fa-whatsapp" style="color: #25D366; font-size: 18px;"></i> WhatsApp
+                        </button>
+                        <button id="shareEmailBtn" class="btn-compartir" style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a); border: 1px solid #0077B5; border-radius: 8px; padding: 12px; color: white; font-weight: 600; font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; transition: all 0.3s ease;">
+                            <i class="fas fa-envelope" style="color: #0077B5; font-size: 18px;"></i> Correo Electronico
+                        </button>
+                        <button id="shareLinkBtn" class="btn-compartir" style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a); border: 1px solid var(--color-accent-primary); border-radius: 8px; padding: 12px; color: white; font-weight: 600; font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; transition: all 0.3s ease;">
+                            <i class="fas fa-link" style="color: var(--color-accent-primary); font-size: 18px;"></i> Copiar Enlace
+                        </button>
+                        <button id="shareCancelBtn" class="btn-compartir" style="background: linear-gradient(145deg, #0f0f0f, #1a1a1a); border: 1px solid var(--color-border-light); border-radius: 8px; padding: 12px; color: #aaa; font-weight: 600; font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 5px; transition: all 0.3s ease;">
+                            <i class="fas fa-times" style="color: #aaa; font-size: 18px;"></i> No compartir ahora
+                        </button>
+                    </div>
+                </div>
+            `,
+            icon: 'info',
+            showConfirmButton: false,
+            showCancelButton: false,
+            didOpen: () => {
+                const tituloReporte = `REPORTE: ${datos.nombreEmpresaCC} - ${this._getTipoEventoTexto(datos.tipoEvento)}`;
+                const montoFormateado = `$${datos.montoPerdido.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+                
+                document.getElementById('shareWhatsAppBtn').onclick = () => {
+                    Swal.close();
+                    const mensajeWhatsApp = `${tituloReporte}\n\nEmpresa: ${datos.nombreEmpresaCC}\nTipo: ${this._getTipoEventoTexto(datos.tipoEvento)}\nMonto: ${montoFormateado}\n\nPDF del reporte:\n${pdfUrl}\n\n--\nPDF enviado por el sistema Centinela.`;
+                    const urlWhatsapp = `https://wa.me/?text=${encodeURIComponent(mensajeWhatsApp)}`;
+                    window.open(urlWhatsapp, '_blank');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'WhatsApp abierto',
+                        text: 'Se abrió WhatsApp con el enlace del PDF.',
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+                    resolve('whatsapp');
+                };
+                
+                document.getElementById('shareEmailBtn').onclick = async () => {
+                    Swal.close();
+                    
+                    const { value: servicio } = await Swal.fire({
+                        title: 'Enviar por correo',
+                        text: 'Selecciona tu servicio de correo',
+                        icon: 'question',
+                        input: 'select',
+                        inputOptions: {
+                            'gmail': 'Gmail',
+                            'outlook': 'Outlook / Hotmail'
+                        },
+                        inputPlaceholder: 'Selecciona un servicio',
+                        showCancelButton: true,
+                        confirmButtonText: 'Abrir Correo',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#ff9122'
+                    });
+                    
+                    if (!servicio) {
+                        resolve('cancel');
+                        return;
+                    }
+                    
+                    const empresaNombre = datos.nombreEmpresaCC;
+                    const tipoEventoTexto = this._getTipoEventoTexto(datos.tipoEvento);
+                    const fechaInicio = new Date(datos.fechaHora).toLocaleDateString('es-MX');
+                    
+                    const tituloReporte = `REPORTE: ${empresaNombre} - ${tipoEventoTexto}`;
+                    
+                    const cuerpoTexto = 
+                        `${tituloReporte}\n\n` +
+                        `Empresa: ${empresaNombre}\n` +
+                        `Tipo de evento: ${tipoEventoTexto}\n` +
+                        `Monto perdido: ${montoFormateado}\n` +
+                        `Fecha: ${fechaInicio}\n\n` +
+                        `PDF del reporte:\n${pdfUrl}\n\n` +
+                        `--\nPDF enviado por el sistema Centinela.`;
+                    
+                    const asunto = encodeURIComponent(tituloReporte);
+                    const cuerpoCodificado = encodeURIComponent(cuerpoTexto);
+                    
+                    if (servicio === 'gmail') {
+                        window.open(`https://mail.google.com/mail/?view=cm&fs=1&su=${asunto}&body=${cuerpoCodificado}`, '_blank');
+                    } else if (servicio === 'outlook') {
+                        window.open(`https://outlook.live.com/mail/0/deeplink/compose?subject=${asunto}&body=${cuerpoCodificado}`, '_blank');
+                    }
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Correo abierto',
+                        text: 'Se abrió tu correo con el enlace del PDF.',
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+                    resolve('email');
+                };
+                
+                document.getElementById('shareLinkBtn').onclick = async () => {
+                    Swal.close();
+                    try {
+                        await navigator.clipboard.writeText(pdfUrl);
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Enlace copiado',
+                            text: 'El enlace del PDF ha sido copiado al portapapeles',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    } catch (err) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Enlace del PDF',
+                            html: `<input type="text" value="${pdfUrl}" style="width:100%; padding:8px; margin-top:10px; border-radius:5px; background: #1a1a1a; color: white; border: 1px solid #333;" readonly onclick="this.select()">`,
+                            confirmButtonText: 'Cerrar',
+                            confirmButtonColor: '#28a745'
+                        });
+                    }
+                    resolve('link');
+                };
+                
+                document.getElementById('shareCancelBtn').onclick = () => {
+                    Swal.close();
+                    resolve('cancel');
+                };
+            }
+        });
+    });
+}
+
+
+    async _subirEvidencias(registroId, imagenes) {
+        if (!imagenes || imagenes.length === 0) return [];
+
+        const resultados = [];
+
+        for (let i = 0; i < imagenes.length; i++) {
+            const img = imagenes[i];
+            const comentario = img.comentario || '';
+
+            const nombreArchivo = img.generatedName ||
+                `${Date.now()}_${Math.random().toString(36).substring(2, 8)}_${img.file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+
+            const rutaStorage = `mercancia_perdida_${this.usuarioActual.organizacionCamelCase}/${registroId}/evidencias/${nombreArchivo}`;
+
+            try {
+                const resultado = await this.mercanciaManager.subirArchivo(img.file, rutaStorage);
+
+                resultados.push({
+                    id: `EVD${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
+                    url: resultado.url,
+                    path: resultado.path,
+                    comentario: comentario,
+                    nombre: img.file.name,
+                    generatedName: nombreArchivo,
+                    fechaAgregada: new Date()
+                });
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        return resultados;
+    }
 
     _volverALista() {
         this.imagenesSeleccionadas.forEach(img => {
@@ -944,7 +1383,7 @@ class CrearMercanciaPerdidaController {
                 URL.revokeObjectURL(img.preview);
             }
         });
-        window.location.href = '../mercanciaPerdida/mercanciaPerdida.html';
+        window.location.href = '/usuarios/administrador/incidenciasRecuperacion/incidenciasRecuperacion.html';
     }
 
     _cancelarCreacion() {
@@ -993,8 +1432,159 @@ class CrearMercanciaPerdidaController {
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
     }
+
+    _getTipoEventoTexto(tipo) {
+        const tipos = {
+            'robo': 'Robo',
+            'extravio': 'Extravío',
+            'accidente': 'Accidente',
+            'otro': 'Otro'
+        };
+        return tipos[tipo] || tipo;
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     window.crearMercanciaPerdidaDebug = { controller: new CrearMercanciaPerdidaController() };
 });
+
+// =============================================
+// FORMULARIO SECUENCIAL - APARECEN AL LLENAR
+// =============================================
+
+document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(() => {
+        inicializarFormularioSecuencial();
+    }, 500);
+});
+
+function inicializarFormularioSecuencial() {
+    let pasoActual = 0;
+    const totalPasos = 7;
+    const campos = document.querySelectorAll('.field-group-step');
+
+    campos.forEach(campo => {
+        campo.classList.remove('visible');
+    });
+
+    if (campos[0]) {
+        campos[0].classList.add('visible');
+    }
+
+    function verificarBotonesFinales() {
+        const empresaValida = document.getElementById('nombreEmpresaCC').value.trim() !== '';
+        const tipoValido = document.getElementById('tipoEvento').value !== '';
+        const montoValido = parseFloat(document.getElementById('montoPerdido').value) > 0;
+        const fechaValida = (() => {
+            const fechaValor = document.getElementById('fechaHoraEvento').value;
+            if (!fechaValor) return false;
+            const fecha = new Date(fechaValor);
+            return !isNaN(fecha.getTime()) && fecha <= new Date();
+        })();
+        const narracionValida = (() => {
+            const texto = document.getElementById('narracionEventos').value.trim();
+            return texto.length >= 10 && texto.length <= 2000;
+        })();
+
+        if (empresaValida && tipoValido && montoValido && fechaValida && narracionValida) {
+            document.getElementById('originalButtons').style.display = 'flex';
+        } else {
+            document.getElementById('originalButtons').style.display = 'none';
+        }
+    }
+
+    function validarYMostrarSiguiente(stepIndex) {
+        if (stepIndex !== pasoActual) return;
+
+        let esValido = false;
+
+        switch (stepIndex) {
+            case 0:
+                esValido = document.getElementById('nombreEmpresaCC').value.trim() !== '';
+                break;
+            case 1:
+                esValido = document.getElementById('tipoEvento').value !== '';
+                break;
+            case 2:
+                const monto = parseFloat(document.getElementById('montoPerdido').value);
+                esValido = !isNaN(monto) && monto > 0;
+                break;
+            case 3:
+                esValido = true;
+                break;
+            case 4:
+                const fechaValor = document.getElementById('fechaHoraEvento').value;
+                if (!fechaValor) {
+                    esValido = false;
+                } else {
+                    const fecha = new Date(fechaValor);
+                    esValido = !isNaN(fecha.getTime()) && fecha <= new Date();
+                }
+                break;
+            case 5:
+                const texto = document.getElementById('narracionEventos').value.trim();
+                esValido = texto.length >= 10 && texto.length <= 2000;
+                break;
+            case 6:
+                esValido = true;
+                break;
+        }
+
+        if (esValido && pasoActual < totalPasos - 1) {
+            const siguienteIndex = pasoActual + 1;
+            const siguienteCampo = document.querySelector(`.field-group-step[data-step="${siguienteIndex}"]`);
+            if (siguienteCampo) {
+                siguienteCampo.classList.add('visible');
+                pasoActual = siguienteIndex;
+
+                setTimeout(() => {
+                    const nuevoInput = siguienteCampo.querySelector('input, select, textarea');
+                    if (nuevoInput) nuevoInput.focus();
+                }, 100);
+            }
+        }
+
+        verificarBotonesFinales();
+    }
+
+    function configurarEventos() {
+        const empresaInput = document.getElementById('nombreEmpresaCC');
+        if (empresaInput) {
+            empresaInput.addEventListener('change', () => validarYMostrarSiguiente(0));
+            empresaInput.addEventListener('blur', () => validarYMostrarSiguiente(0));
+        }
+
+        const tipoSelect = document.getElementById('tipoEvento');
+        if (tipoSelect) {
+            tipoSelect.addEventListener('change', () => validarYMostrarSiguiente(1));
+        }
+
+        const montoInput = document.getElementById('montoPerdido');
+        if (montoInput) {
+            montoInput.addEventListener('input', () => validarYMostrarSiguiente(2));
+        }
+
+        const montoRecupInput = document.getElementById('montoRecuperado');
+        if (montoRecupInput) {
+            montoRecupInput.addEventListener('input', () => validarYMostrarSiguiente(3));
+        }
+
+        const fechaInput = document.getElementById('fechaHoraEvento');
+        if (fechaInput) {
+            fechaInput.addEventListener('change', () => validarYMostrarSiguiente(4));
+        }
+
+        const narracionTextarea = document.getElementById('narracionEventos');
+        if (narracionTextarea) {
+            narracionTextarea.addEventListener('input', () => validarYMostrarSiguiente(5));
+        }
+
+        const detallesTextarea = document.getElementById('detallesPerdida');
+        if (detallesTextarea) {
+            detallesTextarea.addEventListener('input', () => validarYMostrarSiguiente(6));
+        }
+    }
+
+    configurarEventos();
+    verificarBotonesFinales();
+}

@@ -1,6 +1,6 @@
 // ========== permisos.js - GESTIÓN DE PERMISOS ==========
 // Basado en la estructura de categorias.js - VERSIÓN CON LOCALSTORAGE ÚNICAMENTE
-// ACTUALIZADO: Incluye módulos Usuarios, Estadísticas y Tareas
+// ACTUALIZADO: Incluye módulos Usuarios, Estadísticas, Tareas, Permisos, Login/Monitoreo
 // Y lógica de plan para Incidencias y Mapa de Alertas
 
 // ========== VARIABLES GLOBALES ==========
@@ -30,17 +30,19 @@ const nombresModulos = {
     usuarios: 'Usuarios',
     estadisticas: 'Estadísticas',
     tareas: 'Tareas',
+    permisos: 'Permisos',
+    loginMonitoreo: 'LoginMonitoreo',
     monitoreo: 'Mapa Alertas'
 };
 
 // Módulos fijos (siempre visibles)
-const modulosFijos = ['areas', 'categorias', 'sucursales', 'regiones', 'usuarios', 'estadisticas', 'tareas'];
+const modulosFijos = ['areas', 'categorias', 'sucursales', 'regiones', 'usuarios', 'estadisticas', 'tareas', 'permisos', 'loginMonitoreo'];
 
 // Módulos dinámicos (dependen del plan)
 const modulosDinamicos = ['incidencias', 'monitoreo'];
 
 // Orden de los módulos para mostrar
-const ordenModulos = ['areas', 'categorias', 'sucursales', 'regiones', 'incidencias', 'usuarios', 'estadisticas', 'tareas', 'monitoreo'];
+const ordenModulos = ['areas', 'categorias', 'sucursales', 'regiones', 'incidencias', 'usuarios', 'estadisticas', 'tareas', 'permisos', 'loginMonitoreo', 'monitoreo'];
 
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function () {
@@ -106,26 +108,17 @@ async function cargarPermisosDelPlan() {
             adminActual.plan = planId;
         }
 
-        console.log(`🔍 Plan ID obtenido: "${planId}"`);
-
         if (!planId || planId === 'sin-plan' || planId === 'gratis' || planId === 'null' || planId === 'undefined') {
-            console.log('📋 Administrador sin plan asignado - Incidencias y Mapa de Alertas NO disponibles');
             permisosPlan = { incidencias: false, monitoreo: false };
             return;
         }
-
-        console.log(`🔍 Buscando plan con ID: "${planId}" en Firestore`);
 
         const plan = await planManager.obtenerPorId(planId);
 
         if (!plan) {
-            console.warn(`⚠️ Plan "${planId}" no encontrado en Firestore`);
             permisosPlan = { incidencias: false, monitoreo: false };
             return;
         }
-
-        console.log(`✅ Plan encontrado: ${plan.nombre}`);
-        console.log('📦 Mapas activos:', plan.mapasActivos);
 
         const mapasActivos = plan.mapasActivos || {};
 
@@ -134,10 +127,7 @@ async function cargarPermisosDelPlan() {
             monitoreo: mapasActivos.alertas === true
         };
 
-        console.log('🎯 Módulos dinámicos disponibles:', permisosPlan);
-
     } catch (error) {
-        console.error('❌ Error cargando permisos del plan:', error);
         permisosPlan = { incidencias: false, monitoreo: false };
     }
 }
@@ -216,7 +206,7 @@ async function loadAreas() {
             });
         });
     } catch (error) {
-        console.error('Error cargando áreas:', error);
+        // Error handling without console
     }
 }
 
@@ -595,7 +585,6 @@ function showLoadingState() {
                 <div style="text-align:center;">
                     <i class="fas fa-spinner fa-spin" style="font-size:48px; color:var(--color-accent-primary); margin-bottom:16px;"></i>
                     <h5 style="color:white;">Cargando permisos...</h5>
-                    <p style="color:var(--color-text-dim);">Obteniendo datos desde Firebase</p>
                 </div>
             </td>
         </tr>

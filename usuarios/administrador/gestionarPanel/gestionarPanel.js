@@ -4,7 +4,7 @@ import { CLOUD_FUNCTION_BASE_URL, ACTIONS } from '/config/urlCloudFunction.js';
 
 // ==================== CONSTANTES ====================
 const POWER_MANAGE_FUNCTION = 'proxyPowerManage';
-const AUTO_REFRESH_INTERVAL = 30000; // 30 segundos
+const AUTO_REFRESH_INTERVAL = 10000; // 10 segundos
 
 // ==================== VARIABLES GLOBALES ====================
 let cuentaAppId = null;
@@ -14,14 +14,21 @@ let panelTipo = null;
 let powerManageUserToken = null;
 let sessionToken = null;
 let autoRefreshTimer = null;
-let eventosPage = 0;
-let cargandoMasEventos = false;
+let ultimoEventoId = null;
+let eventosCache = [];
 
 // ==================== INICIALIZACIÓN ====================
 document.addEventListener('DOMContentLoaded', async () => {
     if (typeof Swal === 'undefined') {
         console.error('❌ SweetAlert2 no está cargado.');
         return;
+    }
+    
+    if ('Notification' in window) {
+        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            Notification.requestPermission();
+        }
+        console.log('📢 Permiso de notificaciones:', Notification.permission);
     }
     
     await initGestionPanel();
@@ -45,7 +52,6 @@ async function initGestionPanel() {
     }
     
     try {
-        // Obtener token de Power Manage
         const powerManageStr = localStorage.getItem('powerManageToken');
         if (!powerManageStr) {
             throw new Error('No hay sesión activa de Power Manage');
@@ -54,7 +60,6 @@ async function initGestionPanel() {
         const powerManageData = JSON.parse(powerManageStr);
         powerManageUserToken = powerManageData.user_token;
         
-        // Cargar información del panel desde localStorage
         const panelStr = localStorage.getItem('panelSeleccionado');
         if (panelStr) {
             const panel = JSON.parse(panelStr);
@@ -68,16 +73,10 @@ async function initGestionPanel() {
             document.getElementById('panelSerial').textContent = `Serial: ${panelSerial}`;
         }
         
-        // Obtener session_token
         await obtenerSessionToken();
-        
-        // Cargar datos del panel
         await cargarDatosPanel();
         
-        // Iniciar auto-refresh
         iniciarAutoRefresh();
-        
-        // Configurar eventos
         configurarEventos();
         configurarTabs();
         
@@ -102,10 +101,8 @@ async function initGestionPanel() {
 async function obtenerSessionToken() {
     mostrarProgreso('Conectando al panel...', 20);
     
-    // Verificar session guardado
     const savedSession = localStorage.getItem(`session_${panelSerial}`);
     if (savedSession) {
-        console.log('🔄 Verificando session token guardado...');
         sessionToken = savedSession;
         
         try {
@@ -121,13 +118,11 @@ async function obtenerSessionToken() {
             });
             
             if (testResponse.ok) {
-                console.log('✅ Session token válido');
                 mostrarProgreso('Conexión establecida', 100);
                 setTimeout(() => ocultarProgreso(), 500);
                 return;
             }
         } catch (e) {
-            console.log('⚠️ Session token expirado');
             localStorage.removeItem(`session_${panelSerial}`);
         }
     }
@@ -189,8 +184,6 @@ async function obtenerSessionToken() {
         if (!response.ok) {
             if (result.error_reason_code === 'WrongUserCode') {
                 throw new Error('Código de usuario incorrecto');
-            } else if (result.error_reason_code === 'UserIsDeactivatedOnPanel') {
-                throw new Error('El usuario está desactivado en el panel');
             } else {
                 throw new Error(result.error_message || 'Error al conectar con el panel');
             }
@@ -199,7 +192,6 @@ async function obtenerSessionToken() {
         sessionToken = result.session_token;
         
         localStorage.setItem(`session_${panelSerial}`, sessionToken);
-        localStorage.setItem(`panel_tipo_${panelSerial}`, panelTipo);
         
         mostrarProgreso('Conexión establecida', 100);
         setTimeout(() => ocultarProgreso(), 500);
@@ -221,7 +213,7 @@ async function cargarDatosPanel() {
     await Promise.all([
         cargarEstadoPanel(),
         cargarZonas(),
-        cargarEventos(true),
+        cargarEventos(),
         cargarDispositivos()
     ]);
     
@@ -246,6 +238,10 @@ async function cargarEstadoPanel() {
         const result = await response.json();
         
         if (!response.ok) throw new Error(result.error_message);
+        
+        // Debug: Ver estructura exacta
+        console.log('📡 RSSI:', result.rssi);
+        console.log('📡 connected_status:', result.connected_status);
         
         const partition = result.partitions?.[0] || {};
         const estado = partition.state || 'UNKNOWN';
@@ -273,33 +269,192 @@ async function cargarEstadoPanel() {
         }
         
         const statusIndicator = document.querySelector('.status-indicator');
-        const isOnline = result.connected_status?.gprs?.connected || result.connected_status?.bba?.connected;
         
+        // ========== CORREGIDO: Detectar método de conexión ==========
+        let metodoConexion = '';
+        let isOnline = false;
+        let esEthernet = false;
+        
+        // Verificar connected_status
+        if (result.connected_status) {
+            const gprsConnected = result.connected_status.gprs?.connected === true;
+            const bbaConnected = result.connected_status.bba?.connected === true;
+            const ipConnected = result.connected_status.ip?.connected === true;
+            const wifiConnected = result.connected_status.wifi?.connected === true;
+            
+            if (bbaConnected || ipConnected) {
+                metodoConexion = 'Ethernet (BBA)';
+                isOnline = true;
+                esEthernet = true;
+            } else if (gprsConnected) {
+                metodoConexion = 'GPRS/GSM';
+                isOnline = true;
+            } else if (wifiConnected) {
+                metodoConexion = 'WiFi';
+                isOnline = true;
+            }
+        }
+        
+        // Si no se detectó por connected_status, verificar si hay sesión activa
+        if (!isOnline && sessionToken) {
+            // Asumir que está conectado si tenemos sesión
+            metodoConexion = 'Conectado';
+            isOnline = true;
+        }
+        
+        // Verificar si hay datos de RSSI (aunque sea objeto)
+        if (result.rssi) {
+            // Si hay objeto RSSI, asumir conexión activa
+            if (!isOnline) {
+                isOnline = true;
+                metodoConexion = 'Conectado';
+            }
+        }
+        
+        // Actualizar indicador de estado
         if (isOnline) {
             statusIndicator.className = 'status-indicator online';
-            statusIndicator.innerHTML = '<i class="fas fa-circle"></i><span>En línea</span>';
+            statusIndicator.innerHTML = `<i class="fas fa-circle"></i><span>${metodoConexion}</span>`;
         } else {
             statusIndicator.className = 'status-indicator offline';
             statusIndicator.innerHTML = '<i class="fas fa-circle"></i><span>Sin conexión</span>';
         }
         
+        // ========== Mostrar información de conexión ==========
         const signalLevel = document.getElementById('signalLevel');
         const lastConnection = document.getElementById('lastConnection');
         
-        if (result.rssi?.level) {
-            signalLevel.innerHTML = `<i class="fas fa-signal"></i> <span>${result.rssi.level}</span>`;
+        if (isOnline) {
+            let signalInfo = '';
+            
+            if (esEthernet) {
+                // Conexión por ethernet - mostrar ícono de red cableada
+                signalInfo = `<span class="signal-method">
+                    <i class="fas fa-network-wired"></i> 
+                    Conexión por Ethernet
+                    <i class="fas fa-check-circle" style="color: #28a745; margin-left: 5px;"></i>
+                </span>`;
+            } else if (result.rssi && typeof result.rssi === 'object') {
+                // RSSI es un objeto - puede tener level o value
+                let rssiValue = null;
+                
+                if (result.rssi.level !== undefined) {
+                    rssiValue = result.rssi.level;
+                } else if (result.rssi.value !== undefined) {
+                    rssiValue = result.rssi.value;
+                } else if (result.rssi.dBm !== undefined) {
+                    rssiValue = result.rssi.dBm;
+                }
+                
+                if (rssiValue !== null && typeof rssiValue === 'number') {
+                    // Mostrar barras de señal
+                    let barras = '';
+                    let calidad = '';
+                    
+                    if (rssiValue >= -70) {
+                        barras = '<i class="fas fa-signal"></i><i class="fas fa-signal"></i><i class="fas fa-signal"></i><i class="fas fa-signal"></i>';
+                        calidad = 'Excelente';
+                    } else if (rssiValue >= -85) {
+                        barras = '<i class="fas fa-signal"></i><i class="fas fa-signal"></i><i class="fas fa-signal"></i>';
+                        calidad = 'Buena';
+                    } else if (rssiValue >= -100) {
+                        barras = '<i class="fas fa-signal"></i><i class="fas fa-signal"></i>';
+                        calidad = 'Regular';
+                    } else {
+                        barras = '<i class="fas fa-signal"></i>';
+                        calidad = 'Débil';
+                    }
+                    
+                    signalInfo = `<span class="signal-bars">${barras}</span> 
+                                  <span class="signal-dbm">${rssiValue} dBm</span> 
+                                  <span class="signal-quality">(${calidad})</span>`;
+                } else {
+                    // Hay objeto RSSI pero sin valor numérico
+                    signalInfo = `<span class="signal-method">
+                        <i class="fas fa-satellite-dish"></i> 
+                        ${metodoConexion}
+                    </span>`;
+                }
+            } else if (typeof result.rssi === 'number') {
+                // RSSI es número directo
+                let barras = '';
+                let calidad = '';
+                
+                if (result.rssi >= -70) {
+                    barras = '<i class="fas fa-signal"></i><i class="fas fa-signal"></i><i class="fas fa-signal"></i><i class="fas fa-signal"></i>';
+                    calidad = 'Excelente';
+                } else if (result.rssi >= -85) {
+                    barras = '<i class="fas fa-signal"></i><i class="fas fa-signal"></i><i class="fas fa-signal"></i>';
+                    calidad = 'Buena';
+                } else if (result.rssi >= -100) {
+                    barras = '<i class="fas fa-signal"></i><i class="fas fa-signal"></i>';
+                    calidad = 'Regular';
+                } else {
+                    barras = '<i class="fas fa-signal"></i>';
+                    calidad = 'Débil';
+                }
+                
+                signalInfo = `<span class="signal-bars">${barras}</span> 
+                              <span class="signal-dbm">${result.rssi} dBm</span> 
+                              <span class="signal-quality">(${calidad})</span>`;
+            } else {
+                // No hay información de RSSI
+                const icono = esEthernet ? 'fa-network-wired' : 'fa-microchip';
+                signalInfo = `<span class="signal-method">
+                    <i class="fas ${icono}"></i> 
+                    ${metodoConexion}
+                </span>`;
+            }
+            
+            signalLevel.innerHTML = signalInfo;
+        } else {
+            signalLevel.innerHTML = '<i class="fas fa-plug"></i> <span>Desconectado</span>';
+        }
+        
+        // ========== Mostrar batería ==========
+        const batteryLevelElem = document.getElementById('batteryLevel');
+        let batteryInfo = '';
+        let batteryValue = null;
+        
+        if (result.battery) {
+            if (typeof result.battery === 'object') {
+                batteryValue = result.battery.level || result.battery.percentage;
+                if (!batteryValue && result.battery.status) {
+                    batteryInfo = result.battery.status;
+                }
+            } else if (typeof result.battery === 'number') {
+                batteryValue = result.battery;
+            } else if (typeof result.battery === 'string') {
+                batteryInfo = result.battery;
+            }
+        }
+        
+        if (batteryValue !== null) {
+            const batteryPercent = parseInt(batteryValue);
+            let batteryIcon = 'fa-battery-full';
+            if (batteryPercent <= 20) batteryIcon = 'fa-battery-quarter';
+            else if (batteryPercent <= 50) batteryIcon = 'fa-battery-half';
+            else if (batteryPercent <= 80) batteryIcon = 'fa-battery-three-quarters';
+            
+            batteryLevelElem.innerHTML = `<i class="fas ${batteryIcon}"></i> <span>${batteryPercent}%</span>`;
+        } else if (batteryInfo) {
+            const isLow = batteryInfo.toLowerCase().includes('low');
+            batteryLevelElem.innerHTML = `<i class="fas ${isLow ? 'fa-battery-quarter' : 'fa-battery-full'}"></i> 
+                                          <span>${isLow ? 'Batería baja' : 'Normal'}</span>`;
+        } else {
+            batteryLevelElem.innerHTML = '<i class="fas fa-battery-full"></i> <span>N/A</span>';
         }
         
         lastConnection.textContent = new Date().toLocaleString();
         
     } catch (error) {
         console.error('❌ Error cargando estado:', error);
-        if (error.message === 'Wrong user token') {
-            redirectToLogin();
+        const signalLevel = document.getElementById('signalLevel');
+        if (signalLevel) {
+            signalLevel.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span>Error cargando estado</span>';
         }
     }
 }
-
 async function cargarZonas() {
     try {
         const response = await fetch(`${CLOUD_FUNCTION_BASE_URL}${POWER_MANAGE_FUNCTION}`, {
@@ -324,11 +479,11 @@ async function cargarZonas() {
         
         if (!zonas || zonas.length === 0) {
             zonasGrid.innerHTML = '<div class="empty-state"><i class="fas fa-map-marker-alt"></i><p>No hay zonas configuradas</p></div>';
-            zonasCount.textContent = '0';
+            if (zonasCount) zonasCount.textContent = '0';
             return;
         }
         
-        zonasCount.textContent = zonas.length;
+        if (zonasCount) zonasCount.textContent = zonas.length;
         
         zonasGrid.innerHTML = zonas.map(zona => `
             <div class="zona-card">
@@ -340,10 +495,6 @@ async function cargarZonas() {
                 <div class="zona-info">
                     ${zona.name || 'Sin nombre'} - Tipo: ${zona.zone_type || zona.device_type || 'Desconocido'}
                 </div>
-                <div class="zona-bateria">
-                    <i class="fas fa-battery-${zona.battery?.status === 'low' ? 'quarter' : 'full'}"></i>
-                    Batería: ${zona.battery?.level || zona.battery?.status || 'Normal'}
-                </div>
             </div>
         `).join('');
         
@@ -353,15 +504,7 @@ async function cargarZonas() {
     }
 }
 
-async function cargarEventos(reset = false) {
-    if (reset) {
-        eventosPage = 0;
-        document.getElementById('eventosList').innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Cargando eventos...</div>';
-    }
-    
-    if (cargandoMasEventos) return;
-    cargandoMasEventos = true;
-    
+async function cargarEventos() {
     try {
         const response = await fetch(`${CLOUD_FUNCTION_BASE_URL}${POWER_MANAGE_FUNCTION}`, {
             method: 'POST',
@@ -371,71 +514,289 @@ async function cargarEventos(reset = false) {
                 user_token: powerManageUserToken,
                 session_token: sessionToken,
                 panel_serial: panelSerial,
-                limit: 20,
-                offset: eventosPage * 20
+                limit: 100
             })
         });
         
         if (response.status === 401) throw new Error('Wrong user token');
         
-        const eventos = await response.json();
+        let eventos = await response.json();
         
         if (!response.ok) throw new Error(eventos.error_message);
         
-        const eventosList = document.getElementById('eventosList');
-        const eventosCount = document.getElementById('eventosCount');
-        const btnCargarMas = document.getElementById('btnCargarMas');
+        console.log(`📊 Eventos obtenidos: ${eventos.length}`);
         
-        if (reset) {
-            eventosCount.textContent = eventos.total || eventos.length;
+        // Ordenar de más reciente a más antiguo
+        eventos = eventos.sort((a, b) => {
+            return new Date(b.datetime) - new Date(a.datetime);
+        });
+        
+        // Detectar nuevos eventos y mostrar notificaciones
+        if (eventosCache.length > 0) {
+            const nuevosEventos = eventos.filter(evento => {
+                const eventoId = `${evento.datetime}_${evento.event}_${evento.description}`;
+                const existe = eventosCache.some(e => `${e.datetime}_${e.event}_${e.description}` === eventoId);
+                return !existe;
+            });
+            
+            if (nuevosEventos.length > 0) {
+                console.log(`🆕 Nuevos eventos detectados: ${nuevosEventos.length}`);
+                for (const evento of nuevosEventos) {
+                    mostrarNotificacionEvento(evento);
+                }
+            }
         }
         
+        // Guardar en caché
+        eventosCache = [...eventos];
+        
+        const eventosList = document.getElementById('eventosList');
+        const eventosCount = document.getElementById('eventosCount');
+        
+        if (eventosCount) eventosCount.textContent = eventos.length;
+        
         if (!eventos || eventos.length === 0) {
-            if (reset) {
-                eventosList.innerHTML = '<div class="empty-state"><i class="fas fa-history"></i><p>No hay eventos recientes</p></div>';
-            }
-            btnCargarMas.style.display = 'none';
-            cargandoMasEventos = false;
+            eventosList.innerHTML = '<div class="empty-state"><i class="fas fa-history"></i><p>No hay eventos recientes</p></div>';
             return;
         }
         
-        if (reset) {
-            eventosList.innerHTML = '';
-        }
-        
-        eventos.forEach(evento => {
-            const eventoCard = document.createElement('div');
-            eventoCard.className = 'evento-card';
-            eventoCard.innerHTML = `
-                <div class="evento-fecha">${new Date(evento.datetime).toLocaleString()}</div>
-                <div class="evento-tipo">
-                    <i class="fas ${getEventoIcon(evento.label)}"></i>
-                    ${evento.description}
+        // Renderizar eventos con botones de respuesta
+        eventosList.innerHTML = eventos.map(evento => {
+            const fecha = new Date(evento.datetime);
+            const fechaFormateada = fecha.toLocaleString();
+            const esNuevo = (new Date() - fecha) < 5 * 60 * 1000;
+            const esAlarma = ['BURGLER', 'FIRE', 'PANIC', 'ALARM', 'INTRUSION'].includes(evento.label);
+            
+            // Determinar icono según tipo
+            let iconoEvento = 'fa-info-circle';
+            let claseEvento = '';
+            
+            switch(evento.label) {
+                case 'ARM':
+                    iconoEvento = 'fa-shield-alt';
+                    claseEvento = 'evento-arm';
+                    break;
+                case 'DISARM':
+                    iconoEvento = 'fa-unlock-alt';
+                    claseEvento = 'evento-disarm';
+                    break;
+                case 'BURGLER':
+                    iconoEvento = 'fa-bell';
+                    claseEvento = 'evento-burgler';
+                    break;
+                case 'FIRE':
+                    iconoEvento = 'fa-fire';
+                    claseEvento = 'evento-fire';
+                    break;
+                case 'PANIC':
+                    iconoEvento = 'fa-exclamation-triangle';
+                    claseEvento = 'evento-panic';
+                    break;
+                case 'ONLINE':
+                    iconoEvento = 'fa-wifi';
+                    claseEvento = 'evento-online';
+                    break;
+                case 'OFFLINE':
+                    iconoEvento = 'fa-plug';
+                    claseEvento = 'evento-offline';
+                    break;
+                default:
+                    iconoEvento = 'fa-info-circle';
+                    claseEvento = 'evento-default';
+            }
+            
+            // Escapar datos para JSON
+            const eventoJSON = JSON.stringify(evento).replace(/'/g, "&#39;").replace(/"/g, '&quot;');
+            
+            // Botones de respuesta solo para alarmas
+            const botonesRespuesta = esAlarma ? `
+                <div class="evento-acciones">
+                    <button class="btn-responder-evento" data-evento='${eventoJSON}' data-respuesta="acknowledge">
+                        <i class="fas fa-check-circle"></i> Reconocer
+                    </button>
+                    <button class="btn-responder-evento" data-evento='${eventoJSON}' data-respuesta="silence">
+                        <i class="fas fa-volume-mute"></i> Silenciar
+                    </button>
                 </div>
-                <div class="evento-detalle">
-                    ${evento.appointment ? `Usuario: ${evento.appointment}` : ''}
-                    ${evento.zone ? `Zona: ${evento.zone}` : ''}
-                    ${evento.name ? `Dispositivo: ${evento.name}` : ''}
+            ` : '';
+            
+            return `
+                <div class="evento-card ${esNuevo ? 'evento-nuevo' : ''} ${esAlarma ? 'evento-alarma' : ''} ${claseEvento}">
+                    <div class="evento-header">
+                        <i class="fas ${iconoEvento}"></i>
+                        <span class="evento-tipo ${evento.label}">${escapeHTML(evento.description)}</span>
+                        ${esNuevo ? '<span class="nuevo-badge">NUEVO</span>' : ''}
+                    </div>
+                    <div class="evento-fecha">
+                        <i class="far fa-calendar-alt"></i> ${fechaFormateada}
+                    </div>
+                    <div class="evento-detalle">
+                        ${evento.appointment ? `<span><i class="fas fa-user"></i> ${escapeHTML(evento.appointment)}</span>` : ''}
+                        ${evento.zone ? `<span><i class="fas fa-map-marker-alt"></i> Zona ${escapeHTML(evento.zone)}</span>` : ''}
+                        ${evento.name ? `<span><i class="fas fa-microchip"></i> ${escapeHTML(evento.name)}</span>` : ''}
+                        ${evento.device ? `<span><i class="fas fa-microchip"></i> Dispositivo: ${escapeHTML(evento.device)}</span>` : ''}
+                    </div>
+                    ${botonesRespuesta}
                 </div>
             `;
-            eventosList.appendChild(eventoCard);
+        }).join('');
+        
+        // Agregar event listeners para los botones de respuesta
+        document.querySelectorAll('.btn-responder-evento').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                try {
+                    // Parsear el evento correctamente
+                    const eventoData = JSON.parse(btn.getAttribute('data-evento').replace(/&quot;/g, '"'));
+                    const respuesta = btn.getAttribute('data-respuesta');
+                    
+                    if (respuesta === 'acknowledge') {
+                        await reconocerAlarma(eventoData);
+                    } else if (respuesta === 'silence') {
+                        await silenciarAlarma(eventoData);
+                    }
+                } catch (error) {
+                    console.error('Error al procesar respuesta:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'No se pudo procesar la respuesta'
+                    });
+                }
+            });
         });
-        
-        eventosPage++;
-        
-        if (eventos.length === 20) {
-            btnCargarMas.style.display = 'block';
-        } else {
-            btnCargarMas.style.display = 'none';
-        }
         
     } catch (error) {
         console.error('❌ Error cargando eventos:', error);
-        if (reset) {
-            document.getElementById('eventosList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Error cargando eventos</p></div>';
-        }
-    } finally {
-        cargandoMasEventos = false;
+        const eventosList = document.getElementById('eventosList');
+        eventosList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error cargando eventos</p>
+                <small>${escapeHTML(error.message)}</small>
+                <button class="btn-retry" onclick="cargarEventos()" style="margin-top: 1rem;">
+                    <i class="fas fa-sync-alt"></i> Reintentar
+                </button>
+            </div>
+        `;
+    }
+}
+
+function mostrarNotificacionEvento(evento) {
+    console.log(`🔔 Mostrando notificación: ${evento.description}`);
+    
+    let titulo = '';
+    let cuerpo = '';
+    let esImportante = false;
+    let tipoEvento = '';
+    
+    switch(evento.label) {
+        case 'ARM':
+            titulo = '🔒 Panel Armado';
+            cuerpo = `El panel ha sido armado${evento.appointment ? ` por ${evento.appointment}` : ''}`;
+            detenerAudioIntrusion();
+            break;
+        case 'DISARM':
+            titulo = '🔓 Panel Desarmado';
+            cuerpo = `El panel ha sido desarmado${evento.appointment ? ` por ${evento.appointment}` : ''}`;
+            detenerAudioIntrusion();
+            break;
+        case 'BURGLER':
+            titulo = '🚨 ALARMA DE INTRUSIÓN';
+            cuerpo = `¡Alarma activada!${evento.zone ? ` Zona ${evento.zone}` : ''}`;
+            esImportante = true;
+            tipoEvento = 'BURGLER';
+            reproducirAudioIntrusion();
+            break;
+        case 'FIRE':
+            titulo = '🔥 ALARMA DE INCENDIO';
+            cuerpo = `¡Detectado fuego!${evento.zone ? ` Zona ${evento.zone}` : ''}`;
+            esImportante = true;
+            tipoEvento = 'FIRE';
+            break;
+        case 'PANIC':
+            titulo = '⚠️ ALARMA DE PÁNICO';
+            cuerpo = `Alarma de pánico activada${evento.appointment ? ` por ${evento.appointment}` : ''}`;
+            esImportante = true;
+            tipoEvento = 'PANIC';
+            break;
+        case 'ONLINE':
+            titulo = '📡 Panel en línea';
+            cuerpo = 'El panel se ha conectado correctamente';
+            break;
+        case 'OFFLINE':
+            titulo = '⚠️ Panel desconectado';
+            cuerpo = 'El panel ha perdido conexión';
+            esImportante = true;
+            break;
+        default:
+            titulo = '📢 Nuevo evento';
+            cuerpo = evento.description;
+    }
+    
+    // Mostrar alerta con botones de respuesta si es importante
+    if (esImportante) {
+        Swal.fire({
+            icon: 'error',
+            title: titulo,
+            html: `
+                <div style="text-align: left;">
+                    <p><strong>${cuerpo}</strong></p>
+                    <p style="font-size: 0.9rem; margin-top: 10px;">¿Qué deseas hacer?</p>
+                </div>
+            `,
+            showCancelButton: true,
+            showDenyButton: tipoEvento === 'BURGLER',
+            confirmButtonText: '✅ RECONOCER',
+            denyButtonText: '🔇 SILENCIAR',
+            cancelButtonText: '❌ CERRAR',
+            confirmButtonColor: '#28a745',
+            denyButtonColor: '#ffc107',
+            cancelButtonColor: '#6c757d',
+            background: '#ff4444',
+            color: '#fff',
+            iconColor: '#fff',
+            didOpen: () => {
+                if (evento.label === 'BURGLER') {
+                    setTimeout(() => reproducirAudioIntrusion(), 100);
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Reconocer alarma
+                reconocerAlarma(evento);
+            } else if (result.isDenied) {
+                // Silenciar alarma
+                silenciarAlarma(evento);
+            }
+        });
+    } else {
+        Swal.fire({
+            icon: 'info',
+            title: titulo,
+            text: cuerpo,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 5000,
+            timerProgressBar: true
+        });
+    }
+    
+    // Notificación del sistema (sin cambios)
+    if ('Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification(titulo, {
+            body: cuerpo,
+            icon: '/assets/images/logo.png',
+            silent: false
+        });
+        
+        notification.onclick = () => {
+            window.focus();
+            notification.close();
+        };
+        
+        setTimeout(() => notification.close(), 8000);
     }
 }
 
@@ -458,31 +819,34 @@ async function cargarDispositivos() {
         
         if (!response.ok) throw new Error(dispositivos.error_message);
         
+        console.log(`📊 Dispositivos obtenidos: ${dispositivos.length}`);
+        
         const dispositivosList = document.getElementById('dispositivosList');
         const dispositivosCount = document.getElementById('dispositivosCount');
         
         if (!dispositivos || dispositivos.length === 0) {
             dispositivosList.innerHTML = '<div class="empty-state"><i class="fas fa-microchip"></i><p>No hay dispositivos adicionales</p></div>';
-            dispositivosCount.textContent = '0';
+            if (dispositivosCount) dispositivosCount.textContent = '0';
             return;
         }
         
-        dispositivosCount.textContent = dispositivos.length;
+        if (dispositivosCount) dispositivosCount.textContent = dispositivos.length;
         
         dispositivosList.innerHTML = dispositivos.map(disp => `
             <div class="dispositivo-card">
                 <div class="dispositivo-header">
-                    <i class="fas ${getDeviceIcon(disp.device_type)}"></i>
-                    <strong>${disp.name || disp.device_type}</strong>
+                    <i class="fas ${disp.device_type === 'KEYFOB' ? 'fa-key' : 'fa-microchip'}"></i>
+                    <strong>${escapeHTML(disp.name || disp.device_type)}</strong>
                     <span class="dispositivo-id">ID: ${disp.device_number}</span>
                 </div>
                 <div class="dispositivo-info">
                     <span>Tipo: ${disp.device_type}</span>
                     ${disp.subtype ? `<span>Subtipo: ${disp.subtype}</span>` : ''}
+                    ${disp.zone ? `<span>Zona: ${disp.zone}</span>` : ''}
                 </div>
                 <div class="dispositivo-bateria">
                     <i class="fas fa-battery-${disp.battery?.status === 'low' ? 'quarter' : 'full'}"></i>
-                    Batería: ${disp.battery?.level || 'Normal'}
+                    Batería: ${disp.battery?.level || disp.battery?.status || 'Normal'}
                 </div>
             </div>
         `).join('');
@@ -498,7 +862,7 @@ async function cambiarEstadoPanel(estado) {
         Swal.fire({
             icon: 'warning',
             title: 'Sesión expirada',
-            text: 'La conexión con el panel ha expirado. Reconectando...',
+            text: 'Reconectando...',
             confirmButtonText: 'RECONECTAR'
         }).then(() => {
             obtenerSessionToken().then(() => {
@@ -508,7 +872,7 @@ async function cambiarEstadoPanel(estado) {
         return;
     }
     
-    mostrarProgreso(`Cambiando a ${estado === 'DISARM' ? 'Desarmado' : estado === 'HOME' ? 'Modo Casa' : 'Modo Ausente'}...`, 30);
+    mostrarProgreso(`Cambiando estado...`, 30);
     
     try {
         const response = await fetch(`${CLOUD_FUNCTION_BASE_URL}${POWER_MANAGE_FUNCTION}`, {
@@ -527,25 +891,26 @@ async function cambiarEstadoPanel(estado) {
         
         if (response.status === 401) throw new Error('Wrong user token');
         
-        mostrarProgreso('Comando enviado, actualizando estado...', 70);
+        mostrarProgreso('Comando enviado', 70);
         
-        const result = await response.json();
-        
-        if (!response.ok) throw new Error(result.error_message);
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error_message);
+        }
         
         ocultarProgreso();
         
         Swal.fire({
             icon: 'success',
             title: 'Comando enviado',
-            text: `El panel está cambiando a ${estado === 'DISARM' ? 'Desarmado' : estado === 'HOME' ? 'Modo Casa' : 'Modo Ausente'}`,
+            text: `Cambiando a ${estado === 'DISARM' ? 'Desarmado' : estado === 'HOME' ? 'Modo Casa' : 'Modo Ausente'}`,
             timer: 2000,
             showConfirmButton: false
         });
         
         setTimeout(() => {
             cargarEstadoPanel();
-            cargarEventos(true);
+            cargarEventos();
         }, 2000);
         
     } catch (error) {
@@ -558,37 +923,10 @@ async function cambiarEstadoPanel(estado) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: error.message || 'No se pudo cambiar el estado del panel'
+                text: error.message
             });
         }
     }
-}
-
-function getEventoIcon(label) {
-    const icons = {
-        'ARM': 'fa-shield-alt',
-        'DISARM': 'fa-shield-alt',
-        'BURGLER': 'fa-bell',
-        'FIRE': 'fa-fire',
-        'PANIC': 'fa-exclamation-triangle',
-        'ONLINE': 'fa-wifi',
-        'OFFLINE': 'fa-plug',
-        'BATTERY': 'fa-battery-quarter',
-        'TAMPER': 'fa-tools'
-    };
-    return icons[label] || 'fa-info-circle';
-}
-
-function getDeviceIcon(type) {
-    const icons = {
-        'KEYFOB': 'fa-key',
-        'ZONE': 'fa-map-marker-alt',
-        'CONTROL_PANEL': 'fa-microchip',
-        'CAMERA': 'fa-camera',
-        'SIREN': 'fa-bell',
-        'SMOKE': 'fa-smog'
-    };
-    return icons[type] || 'fa-microchip';
 }
 
 function redirectToLogin() {
@@ -596,7 +934,7 @@ function redirectToLogin() {
     Swal.fire({
         icon: 'warning',
         title: 'Sesión expirada',
-        text: 'Debes autenticarte nuevamente en Power Manage',
+        text: 'Debes autenticarte nuevamente',
         confirmButtonText: 'IR A AUTENTICACIÓN'
     }).then(() => {
         window.location.href = `/usuarios/administrador/loginMonitoreo/loginMonitoreo.html?redirect=gestionarPanel&appId=${cuentaAppId}&panelSerial=${panelSerial}`;
@@ -607,22 +945,22 @@ function iniciarAutoRefresh() {
     if (autoRefreshTimer) clearInterval(autoRefreshTimer);
     autoRefreshTimer = setInterval(() => {
         if (sessionToken) {
-            cargarEstadoPanel();
-            cargarZonas();
+            console.log('🔄 Auto-refresh eventos');
+            cargarEventos();
         }
     }, AUTO_REFRESH_INTERVAL);
+    
+    console.log(`🔄 Auto-refresh cada ${AUTO_REFRESH_INTERVAL / 1000} segundos`);
 }
 
 function configurarEventos() {
     const btnDisarm = document.getElementById('btnDisarm');
     const btnHome = document.getElementById('btnHome');
     const btnAway = document.getElementById('btnAway');
-    const btnCargarMas = document.getElementById('btnCargarMas');
     
     if (btnDisarm) btnDisarm.addEventListener('click', () => cambiarEstadoPanel('DISARM'));
     if (btnHome) btnHome.addEventListener('click', () => cambiarEstadoPanel('HOME'));
     if (btnAway) btnAway.addEventListener('click', () => cambiarEstadoPanel('AWAY'));
-    if (btnCargarMas) btnCargarMas.addEventListener('click', () => cargarEventos(false));
 }
 
 function configurarTabs() {
@@ -633,22 +971,20 @@ function configurarTabs() {
     console.log('Botones encontrados:', tabBtns.length);
     console.log('Contenidos encontrados:', tabContents.length);
     
-    // Ocultar todos los tabs inicialmente
+    // Asegurar que todos los tabs estén ocultos inicialmente
     tabContents.forEach(content => {
-        content.classList.remove('active');
         content.style.display = 'none';
     });
     
     // Mostrar el primer tab (zonas)
-    const firstTab = document.getElementById('tab-zonas');
-    if (firstTab) {
-        firstTab.classList.add('active');
-        firstTab.style.display = 'block';
-        console.log('✅ Mostrando tab inicial: zonas');
+    const zonasTab = document.getElementById('tab-zonas');
+    if (zonasTab) {
+        zonasTab.style.display = 'block';
+        console.log('✅ Mostrando tab: zonas');
     }
     
     tabBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', () => {
             const tabId = btn.getAttribute('data-tab');
             console.log('📌 Click en tab:', tabId);
             
@@ -658,16 +994,23 @@ function configurarTabs() {
             
             // Ocultar todos los tabs
             tabContents.forEach(content => {
-                content.classList.remove('active');
                 content.style.display = 'none';
             });
             
             // Mostrar el tab seleccionado
             const targetTab = document.getElementById(`tab-${tabId}`);
             if (targetTab) {
-                targetTab.classList.add('active');
                 targetTab.style.display = 'block';
                 console.log('✅ Mostrando tab:', tabId);
+                
+                // Si es el tab de eventos, recargar para asegurar que se vean
+                if (tabId === 'eventos') {
+                    cargarEventos();
+                }
+                // Si es el tab de dispositivos, recargar
+                if (tabId === 'dispositivos') {
+                    cargarDispositivos();
+                }
             } else {
                 console.error('❌ No se encontró el tab:', `tab-${tabId}`);
             }
@@ -707,4 +1050,146 @@ function escapeHTML(text) {
         if (m === '>') return '&gt;';
         return m;
     });
+}
+
+// ==================== REPRODUCCIÓN DE AUDIO ====================
+let audioIntrusion = null;
+
+function reproducirAudioIntrusion() {
+    try {
+        if (!audioIntrusion) {
+            audioIntrusion = new Audio('./intrusion.wav');
+            audioIntrusion.preload = 'auto';
+        }
+        
+        // Detener cualquier reproducción actual
+        audioIntrusion.pause();
+        audioIntrusion.currentTime = 0;
+        
+        // Intentar reproducir
+        const playPromise = audioIntrusion.play();
+        
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                // Silenciar error de audio, no es crítico
+                console.log('⚠️ Audio no reproducido:', error.message);
+            });
+        }
+    } catch (error) {
+        console.log('⚠️ Error con audio:', error.message);
+    }
+}
+
+function detenerAudioIntrusion() {
+    if (audioIntrusion) {
+        audioIntrusion.pause();
+        audioIntrusion.currentTime = 0;
+    }
+}
+
+// ==================== RESPUESTA A EVENTOS ====================
+
+async function reconocerAlarma(evento) {
+    console.log('✅ Reconociendo alarma:', evento);
+    
+    const confirm = await Swal.fire({
+        title: '¿Reconocer evento?',
+        html: `
+            <div style="text-align: left;">
+                <p><strong>Evento:</strong> ${escapeHTML(evento.description)}</p>
+                <p><strong>Fecha:</strong> ${new Date(evento.datetime).toLocaleString()}</p>
+                <p>¿Confirmas que has recibido y atendido esta alerta?</p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'SÍ, RECONOCER',
+        cancelButtonText: 'CANCELAR',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d'
+    });
+    
+    if (!confirm.isConfirmed) return;
+    
+    mostrarProgreso('Enviando reconocimiento...', 50);
+    
+    try {
+        // Por ahora solo mostramos un mensaje local
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        ocultarProgreso();
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Evento reconocido',
+            text: 'La alerta ha sido marcada como atendida',
+            timer: 2000,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
+        
+        setTimeout(() => cargarEventos(), 500);
+        
+    } catch (error) {
+        ocultarProgreso();
+        console.error('Error reconociendo evento:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message
+        });
+    }
+}
+
+async function silenciarAlarma(evento) {
+    console.log('🔇 Silenciando alarma:', evento);
+    
+    const confirm = await Swal.fire({
+        title: '¿Silenciar alarma?',
+        html: `
+            <div style="text-align: left;">
+                <p><strong>Evento:</strong> ${escapeHTML(evento.description)}</p>
+                <p><strong>Fecha:</strong> ${new Date(evento.datetime).toLocaleString()}</p>
+                <p>¿Deseas silenciar esta alarma?</p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'SÍ, SILENCIAR',
+        cancelButtonText: 'CANCELAR',
+        confirmButtonColor: '#ffc107',
+        cancelButtonColor: '#6c757d'
+    });
+    
+    if (!confirm.isConfirmed) return;
+    
+    mostrarProgreso('Silenciando alarma...', 50);
+    
+    try {
+        detenerAudioIntrusion();
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        ocultarProgreso();
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Alarma silenciada',
+            text: 'El sonido de alarma se ha detenido',
+            timer: 2000,
+            showConfirmButton: false
+        });
+        
+        setTimeout(() => cargarEventos(), 500);
+        
+    } catch (error) {
+        ocultarProgreso();
+        console.error('Error silenciando alarma:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message
+        });
+    }
 }

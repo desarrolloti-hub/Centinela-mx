@@ -21,7 +21,7 @@ const IMAGEN_CONFIG = {
     RETRY_DELAY: 1000,
     MAX_PARALLEL: 3,
     CACHE_DURATION: 300000,
-    MAX_IMAGE_SIZE: 5 * 1024 * 1024,
+    MAX_IMAGE_SIZE: 10 * 1024 * 1024,
     SUPPORTED_FORMATS: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'],
     TAMANIOS: {
         IMAGEN_PRINCIPAL: {
@@ -32,7 +32,11 @@ const IMAGEN_CONFIG = {
             ancho: 85,
             alto: 70
         }
-    }
+    },
+    ALTURA_COMENTARIO: 18,
+    ESPACIADO_COMENTARIO: 4,
+    ALTURA_LINEA: 4.5,
+    MAX_CARACTERES_COMENTARIO: 45
 };
 
 class MercanciaPDFGenerator extends PDFBaseGenerator {
@@ -45,7 +49,6 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         this.imageCache = new Map();
         this.pendingImages = new Map();
         
-        // Alturas de contenedores para formato carta
         this.alturasContenedores = {
             identificacion: 18,
             datosGenerales: 28,
@@ -90,10 +93,6 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         if (config.authToken) this.authToken = config.authToken;
     }
 
-    // =============================================
-    // MÉTODOS DE UTILIDAD
-    // =============================================
-    
     obtenerNombreEmpresa(nombreEmpresaCC) {
         if (!nombreEmpresaCC) return 'No especificada';
         return nombreEmpresaCC;
@@ -166,24 +165,56 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         }
     }
 
-    // =============================================
-    // SISTEMA DE IMÁGENES - VERSIÓN COMPLETA (igual que iph-generator)
-    // =============================================
-    
+    async blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    dividirTextoPorCaracteres(texto, maxChars = 45) {
+        if (!texto) return [''];
+        
+        const lineas = [];
+        const parrafos = texto.split('\n');
+        
+        for (const parrafo of parrafos) {
+            if (parrafo.trim() === '') {
+                lineas.push('');
+                continue;
+            }
+            
+            let inicio = 0;
+            while (inicio < parrafo.length) {
+                let fin = inicio + maxChars;
+                if (fin >= parrafo.length) {
+                    lineas.push(parrafo.substring(inicio));
+                    break;
+                }
+                let corte = fin;
+                while (corte > inicio && parrafo[corte] !== ' ' && parrafo[corte] !== '-' && parrafo[corte] !== ',' && parrafo[corte] !== ';') {
+                    corte--;
+                }
+                if (corte === inicio) {
+                    corte = fin;
+                }
+                lineas.push(parrafo.substring(inicio, corte));
+                inicio = corte;
+                while (inicio < parrafo.length && parrafo[inicio] === ' ') {
+                    inicio++;
+                }
+            }
+        }
+        return lineas;
+    }
+
     extraerUrlImagen(item) {
         if (!item) return null;
         
         if (typeof item === 'string') {
             const trimmed = item.trim();
-            if (trimmed.includes('firebasestorage.googleapis.com') || 
-                trimmed.includes('firebaseio.com') ||
-                trimmed.includes('firebase')) {
-                if (this.authToken && !trimmed.includes('token=')) {
-                    const separator = trimmed.includes('?') ? '&' : '?';
-                    return `${trimmed}${separator}token=${this.authToken}`;
-                }
-                return trimmed;
-            }
             if (trimmed.startsWith('http') || trimmed.startsWith('data:image') || trimmed.startsWith('blob:')) {
                 return trimmed;
             }
@@ -191,19 +222,20 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         }
         
         if (typeof item === 'object') {
-            const firebaseProps = ['url', 'downloadURL', 'storageUrl', 'firebaseUrl', 'urlDescarga'];
+            if (item.url && typeof item.url === 'string') {
+                let url = item.url.trim();
+                return url;
+            }
+            
+            const firebaseProps = ['downloadURL', 'storageUrl', 'firebaseUrl', 'urlDescarga'];
             for (const prop of firebaseProps) {
                 if (item[prop] && typeof item[prop] === 'string') {
                     let url = item[prop].trim();
-                    if ((url.includes('firebase') || url.includes('googleapis')) && this.authToken && !url.includes('token=')) {
-                        const separator = url.includes('?') ? '&' : '?';
-                        url = `${url}${separator}token=${this.authToken}`;
-                    }
                     return url;
                 }
             }
             
-            const props = ['src', 'path', 'imageUrl', 'foto', 'imagen', 'evidencia', 'fotoUrl', 'imagenUrl'];
+            const props = ['src', 'imageUrl', 'foto', 'imagen', 'evidencia', 'fotoUrl', 'imagenUrl'];
             for (const prop of props) {
                 if (item[prop] && typeof item[prop] === 'string') {
                     const valor = item[prop].trim();
@@ -213,8 +245,8 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                 }
             }
             
-            if (item.url && typeof item.url === 'object' && item.url.url) {
-                return item.url.url;
+            if (item.path && typeof item.path === 'string') {
+                return null;
             }
         }
         
@@ -256,11 +288,11 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         return normalized;
     }
     
-    async cargarImagenConTimeout(url, timeoutMs = IMAGEN_CONFIG.TIMEOUT) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-        
+    async cargarConFetch(url) {
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
             const headers = {};
             if (this.authToken) {
                 headers['Authorization'] = `Bearer ${this.authToken}`;
@@ -276,38 +308,102 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             clearTimeout(timeoutId);
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(`HTTP ${response.status}`);
             }
             
             const blob = await response.blob();
             
-            if (!IMAGEN_CONFIG.SUPPORTED_FORMATS.includes(blob.type)) {
-                throw new Error(`Formato no soportado: ${blob.type}`);
+            if (!blob.type.startsWith('image/')) {
+                throw new Error('No es una imagen');
             }
             
             if (blob.size > IMAGEN_CONFIG.MAX_IMAGE_SIZE) {
-                throw new Error(`Imagen demasiado grande: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
+                throw new Error(`Imagen muy grande: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
             }
             
             return await this.blobToBase64(blob);
             
         } catch (error) {
-            clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
-                throw new Error(`Timeout después de ${timeoutMs}ms`);
-            }
-            throw error;
+            console.warn('Fetch falló:', error.message);
+            return null;
         }
     }
     
-    // MÉTODO CRÍTICO: cargarImagenMultiEstrategia (igual que en iph-generator)
+    async cargarConImage(url) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            const timeoutId = setTimeout(() => {
+                img.src = '';
+                resolve(null);
+            }, 10000);
+            
+            img.onload = () => {
+                clearTimeout(timeoutId);
+                const canvas = document.createElement('canvas');
+                const maxDimension = 1024;
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > maxDimension || height > maxDimension) {
+                    if (width > height) {
+                        height = (height * maxDimension) / width;
+                        width = maxDimension;
+                    } else {
+                        width = (width * maxDimension) / height;
+                        height = maxDimension;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            
+            img.onerror = () => {
+                clearTimeout(timeoutId);
+                resolve(null);
+            };
+            
+            img.crossOrigin = 'Anonymous';
+            img.src = url;
+        });
+    }
+    
+    async cargarConProxy(url) {
+        const proxies = [
+            `https://corsproxy.io/?${encodeURIComponent(url)}`,
+            `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            `https://cors-anywhere.herokuapp.com/${url}`
+        ];
+        
+        for (const proxyUrl of proxies) {
+            try {
+                const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+                if (response.ok) {
+                    const blob = await response.blob();
+                    if (blob.type.startsWith('image/')) {
+                        return await this.blobToBase64(blob);
+                    }
+                }
+            } catch (error) {
+                console.warn('Proxy falló:', error.message);
+                continue;
+            }
+        }
+        return null;
+    }
+    
     async cargarImagenMultiEstrategia(url, intento = 0) {
         const urlNormalizada = this.normalizarUrl(url);
+        
         if (!this.esUrlValida(urlNormalizada)) {
             throw new Error('URL inválida');
         }
         
         const cacheKey = `${urlNormalizada}_${intento}`;
+        
         if (this.imageCache.has(cacheKey)) {
             return this.imageCache.get(cacheKey);
         }
@@ -317,59 +413,9 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         }
         
         const estrategias = [
-            async () => this.cargarImagenConTimeout(urlNormalizada),
-            async () => {
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(urlNormalizada)}`;
-                return await this.cargarImagenConTimeout(proxyUrl, 10000);
-            },
-            async () => {
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(urlNormalizada)}`;
-                return await this.cargarImagenConTimeout(proxyUrl, 10000);
-            },
-            async () => {
-                const proxyUrl = `https://cors-anywhere.herokuapp.com/${urlNormalizada}`;
-                return await this.cargarImagenConTimeout(proxyUrl, 10000);
-            },
-            async () => {
-                return new Promise((resolve, reject) => {
-                    const img = new Image();
-                    const timeoutId = setTimeout(() => {
-                        reject(new Error('Image element timeout'));
-                    }, IMAGEN_CONFIG.TIMEOUT);
-                    
-                    img.onload = () => {
-                        clearTimeout(timeoutId);
-                        const canvas = document.createElement('canvas');
-                        const maxDimension = 1024;
-                        let width = img.width;
-                        let height = img.height;
-                        
-                        if (width > maxDimension || height > maxDimension) {
-                            if (width > height) {
-                                height = (height * maxDimension) / width;
-                                width = maxDimension;
-                            } else {
-                                width = (width * maxDimension) / height;
-                                height = maxDimension;
-                            }
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.85));
-                    };
-                    
-                    img.onerror = () => {
-                        clearTimeout(timeoutId);
-                        reject(new Error('Failed to load image'));
-                    };
-                    
-                    img.crossOrigin = 'Anonymous';
-                    img.src = urlNormalizada;
-                });
-            }
+            () => this.cargarConFetch(urlNormalizada),
+            () => this.cargarConImage(urlNormalizada),
+            () => this.cargarConProxy(urlNormalizada)
         ];
         
         const cargaPromise = (async () => {
@@ -387,8 +433,8 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                     }
                 } catch (error) {
                     lastError = error;
-                    console.warn(`Estrategia ${i + 1} falló para ${urlNormalizada}:`, error.message);
-                    await new Promise(r => setTimeout(r, 200));
+                    console.warn(`Estrategia ${i + 1} falló:`, error.message);
+                    await new Promise(r => setTimeout(r, 500));
                 }
             }
             
@@ -402,7 +448,7 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         } finally {
             setTimeout(() => {
                 this.pendingImages.delete(cacheKey);
-            }, 1000);
+            }, 2000);
         }
     }
     
@@ -413,10 +459,8 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             try {
                 if (intento > 0) {
                     const delay = IMAGEN_CONFIG.RETRY_DELAY * Math.pow(2, intento - 1);
-                    console.log(`⏳ Reintentando en ${delay}ms...`);
                     await new Promise(r => setTimeout(r, delay));
                 }
-                // ✅ AHORA USA cargarImagenMultiEstrategia
                 return await this.cargarImagenMultiEstrategia(url, intento);
             } catch (error) {
                 lastError = error;
@@ -424,11 +468,20 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             }
         }
         
-        throw lastError || new Error('No se pudo cargar la imagen después de múltiples reintentos');
+        throw lastError || new Error('No se pudo cargar la imagen');
     }
     
-    async preCargarImagenes(urls, onProgress) {
-        const urlsValidas = urls.filter(url => this.esUrlValida(this.extraerUrlImagen(url)));
+    async preCargarImagenes(items, onProgress) {
+        const itemsValidos = items.filter(item => {
+            const url = this.extraerUrlImagen(item);
+            return url && this.esUrlValida(url);
+        });
+        
+        if (itemsValidos.length === 0) {
+            if (onProgress) onProgress(1);
+            return new Map();
+        }
+        
         const resultados = new Map();
         let completadas = 0;
         
@@ -439,23 +492,32 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                     completadas++;
                     return null;
                 }
+                
                 const imgData = await this.cargarImagenConReintentos(imagenUrl);
-                resultados.set(imagenUrl, imgData);
+                
+                if (imgData) {
+                    resultados.set(imagenUrl, imgData);
+                }
+                
                 completadas++;
                 if (onProgress) {
-                    onProgress(completadas / urlsValidas.length);
+                    onProgress(completadas / itemsValidos.length);
                 }
+                
                 return imgData;
             } catch (error) {
                 console.error('Error precargando imagen:', error);
                 completadas++;
+                if (onProgress) {
+                    onProgress(completadas / itemsValidos.length);
+                }
                 return null;
             }
         };
         
         const lotes = [];
-        for (let i = 0; i < urlsValidas.length; i += IMAGEN_CONFIG.MAX_PARALLEL) {
-            lotes.push(urlsValidas.slice(i, i + IMAGEN_CONFIG.MAX_PARALLEL));
+        for (let i = 0; i < itemsValidos.length; i += IMAGEN_CONFIG.MAX_PARALLEL) {
+            lotes.push(itemsValidos.slice(i, i + IMAGEN_CONFIG.MAX_PARALLEL));
         }
         
         for (const lote of lotes) {
@@ -484,11 +546,25 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         }
     }
     
-    async dibujarImagenEnPDF(pdf, imagen, x, y, ancho, alto, numero, esEvidencia = false) {
+    async dibujarImagenConComentario(pdf, imagen, x, y, ancho, alto, numero, anchoDisponible = null) {
         try {
             const imgData = await this.obtenerImagen(imagen);
+            const comentario = this.extraerComentario(imagen);
+            
+            pdf.saveGraphicsState();
+            
+            const margenImagen = 5;
+            const anchoConMargen = ancho - (margenImagen * 2);
+            const altoConMargen = alto - (margenImagen * 2);
+            
+            pdf.setDrawColor(80, 80, 80);
+            pdf.setLineWidth(0.3);
+            pdf.rect(x, y, ancho, alto, 'S');
             
             if (imgData) {
+                pdf.setFillColor(255, 255, 255);
+                pdf.rect(x, y, ancho, alto, 'F');
+                
                 try {
                     const tempImg = new Image();
                     await new Promise((resolve, reject) => {
@@ -498,8 +574,8 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                     });
                     
                     const aspectRatio = tempImg.width / tempImg.height;
-                    let drawWidth = ancho - 4;
-                    let drawHeight = alto - 4;
+                    let drawWidth = anchoConMargen;
+                    let drawHeight = altoConMargen;
                     
                     if (aspectRatio > 1) {
                         drawHeight = drawWidth / aspectRatio;
@@ -510,79 +586,94 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                     const xOffset = (ancho - drawWidth) / 2;
                     const yOffset = (alto - drawHeight) / 2;
                     
-                    pdf.addImage(imgData, 'JPEG', x + 2 + xOffset, y + 2 + yOffset, drawWidth, drawHeight, undefined, 'FAST');
-                } catch {
-                    pdf.addImage(imgData, 'JPEG', x + 2, y + 2, ancho - 4, alto - 4, undefined, 'FAST');
+                    pdf.addImage(imgData, 'JPEG', x + xOffset, y + yOffset, drawWidth, drawHeight, undefined, 'FAST');
+                    
+                } catch (imgError) {
+                    pdf.addImage(imgData, 'JPEG', x + margenImagen, y + margenImagen, anchoConMargen, altoConMargen, undefined, 'FAST');
                 }
             } else {
-                this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero, esEvidencia);
+                this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero);
             }
-        } catch (error) {
-            console.error(`Error dibujando imagen #${numero}:`, error);
-            this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero, esEvidencia);
-        }
-    }
-    
-    async procesarImagen(pdf, imagen, x, y, ancho, alto, xComentario, anchoComentario, numero, esEvidencia, onProgress) {
-        try {
-            await this.dibujarImagenEnPDF(pdf, imagen, x, y, ancho, alto, numero, esEvidencia);
             
-            const comentario = this.extraerComentario(imagen);
-            if (comentario) {
+            pdf.restoreGraphicsState();
+            
+            const anchoTexto = anchoDisponible || ancho;
+            const xComentario = x;
+            const yComentario = y + alto + IMAGEN_CONFIG.ESPACIADO_COMENTARIO;
+            
+            if (comentario && comentario.trim() !== '') {
+                const lineasComentario = this.dividirTextoPorCaracteres(comentario, IMAGEN_CONFIG.MAX_CARACTERES_COMENTARIO);
+                const lineasMostrar = Math.min(lineasComentario.length + 1, 5);
+                const alturaComentario = Math.min(lineasMostrar * IMAGEN_CONFIG.ALTURA_LINEA + 6, IMAGEN_CONFIG.ALTURA_COMENTARIO + 20);
+                
                 pdf.setFillColor(248, 248, 248);
-                pdf.rect(xComentario, y, anchoComentario, alto, 'F');
+                pdf.rect(xComentario, yComentario - 1, anchoTexto, alturaComentario + 4, 'F');
                 
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(this.fonts.mini);
-                pdf.setTextColor(coloresBase.secundario);
-                pdf.text('📝 Comentario:', xComentario + 5, y + 6);
+                pdf.setTextColor(80, 80, 80);
+                pdf.text("Descripción:", xComentario + 3, yComentario + 4);
+                
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(this.fonts.mini);
+                pdf.setTextColor(80, 80, 80);
+                
+                let yTexto = yComentario + 4;
+                const lineasTexto = Math.min(lineasComentario.length, 4);
+                for (let i = 0; i < lineasTexto; i++) {
+                    pdf.text(lineasComentario[i], xComentario + 3, yTexto + (i * IMAGEN_CONFIG.ALTURA_LINEA) + 4);
+                }
+                
+                if (lineasComentario.length <= 4) {
+                    pdf.setFont('helvetica', 'italic');
+                    pdf.setFontSize(this.fonts.mini - 1);
+                    pdf.setTextColor(180, 180, 180);
+                    pdf.text("─", xComentario + 3, yTexto + (lineasTexto * IMAGEN_CONFIG.ALTURA_LINEA) + 8);
+                }
+                
+                if (lineasComentario.length > 4) {
+                    pdf.setFont('helvetica', 'italic');
+                    pdf.setTextColor(150, 150, 150);
+                    pdf.text("(Más texto disponible)", xComentario + 3, yTexto + (4 * IMAGEN_CONFIG.ALTURA_LINEA) + 8);
+                }
+                
+                return {
+                    alturaUtilizada: alto + IMAGEN_CONFIG.ESPACIADO_COMENTARIO + alturaComentario + 8
+                };
+            } else {
+                pdf.setFillColor(250, 250, 250);
+                pdf.rect(xComentario, yComentario - 1, anchoTexto, 12, 'F');
                 
                 pdf.setFont('helvetica', 'italic');
                 pdf.setFontSize(this.fonts.mini - 1);
-                pdf.setTextColor(coloresBase.textoClaro);
+                pdf.setTextColor(150, 150, 150);
+                pdf.text("Sin descripción", xComentario + 3, yComentario + 6);
                 
-                const anchoTextoComentario = anchoComentario - 12;
-                const lineasComentario = this.dividirTextoEnLineas(pdf, comentario, anchoTextoComentario);
-                const lineasMaximas = Math.floor((alto - 15) / 3.5);
-                
-                for (let i = 0; i < Math.min(lineasComentario.length, lineasMaximas); i++) {
-                    pdf.text(lineasComentario[i], xComentario + 5, y + 12 + (i * 3.5));
-                }
+                return {
+                    alturaUtilizada: alto + IMAGEN_CONFIG.ESPACIADO_COMENTARIO + 14
+                };
             }
             
-            if (onProgress) {
-                onProgress(Math.min(95, 50 + (Math.random() * 30)));
-            }
         } catch (error) {
-            console.error(`Error procesando imagen #${numero}:`, error);
-            this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero, esEvidencia);
+            console.error(`Error dibujando imagen ${numero}:`, error);
+            this.dibujarPlaceholder(pdf, x, y, ancho, alto, numero);
+            return { alturaUtilizada: alto + IMAGEN_CONFIG.ESPACIADO_COMENTARIO + 14 };
         }
     }
     
-    dibujarPlaceholder(pdf, x, y, ancho, alto, numero, esEvidencia) {
+    dibujarPlaceholder(pdf, x, y, ancho, alto, numero) {
         pdf.setFillColor(245, 245, 245);
-        pdf.rect(x + 2, y + 2, ancho - 4, alto - 4, 'F');
+        pdf.rect(x + 1, y + 1, ancho - 2, alto - 2, 'F');
         
-        pdf.setDrawColor(coloresBase.borde);
-        pdf.setLineWidth(0.5);
-        pdf.rect(x + 2, y + 2, ancho - 4, alto - 4, 'S');
+        pdf.setDrawColor(200, 200, 200);
+        pdf.setLineWidth(0.3);
+        pdf.rect(x, y, ancho, alto, 'S');
         
-        pdf.setFont('helvetica', 'bold');
+        pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(this.fonts.small);
-        pdf.setTextColor(coloresBase.textoClaro);
-        
-        const texto = esEvidencia ? `📎 Evidencia ${numero}` : `📷 Foto ${numero}`;
-        pdf.text(texto, x + (ancho / 2), y + (alto / 2) - 3, { align: 'center' });
-        
-        pdf.setFont('helvetica', 'italic');
-        pdf.setFontSize(this.fonts.mini);
-        pdf.setTextColor(coloresBase.textoClaro);
-        pdf.text('(no disponible)', x + (ancho / 2), y + (alto / 2) + 5, { align: 'center' });
+        pdf.setTextColor(150, 150, 150);
+        pdf.text(`[ Imagen ${numero} no disponible ]`, x + (ancho / 2), y + (alto / 2), { align: 'center' });
     }
-    
-    // =============================================
-    // CÁLCULO DE PÁGINAS
-    // =============================================
     
     async calcularTotalPaginasReal(registro) {
         let total = 1;
@@ -601,10 +692,6 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         return total;
     }
     
-    // =============================================
-    // GENERACIÓN DE PÁGINAS (el resto del código permanece igual)
-    // =============================================
-    
     async generarPaginaReporte(pdf, registro, onProgress) {
         const margen = 15;
         const anchoPagina = this.configuracionCarta.ancho;
@@ -612,11 +699,9 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         const anchoContenido = anchoPagina - (margen * 2);
         let yPos = this.alturaEncabezado + 5;
         
-        this.dibujarEncabezadoBase(pdf, 'INFORME DE MERCANCÍA PERDIDA/ROBADA', registro.id);
+        this.dibujarEncabezadoBase(pdf, 'MERCANCÍA PERDIDA/ROBADA', registro.id);
         
-        // =============================================
         // IDENTIFICACIÓN
-        // =============================================
         pdf.setFillColor(coloresBase.fondo);
         pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.identificacion, 'F');
         pdf.setFont('helvetica', 'bold');
@@ -632,7 +717,9 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         pdf.text(`EMPRESA / CENTRO COMERCIAL: ${this.obtenerNombreEmpresa(registro.nombreEmpresaCC)}`, margen + 2, yPos);
         yPos += this.alturasContenedores.identificacion - 7;
         
-        // DATOS GENERALES
+        // =============================================
+        // DATOS GENERALES (OPTIMIZADOS - SIN ESPACIOS MUERTOS)
+        // =============================================
         pdf.setFillColor(coloresBase.fondo);
         pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.datosGenerales, 'F');
         pdf.setFont('helvetica', 'bold');
@@ -643,20 +730,53 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(this.fonts.small);
         pdf.setTextColor(coloresBase.texto);
-        
-        const fechaCreacion = registro.fechaCreacion ? new Date(registro.fechaCreacion) : new Date();
+
+        // Fecha y hora en la misma línea
+        const fechaCreacion = registro.fechaCreacion ? new Date(registro.fechaCreacion) : (registro.fecha || new Date());
         const fechaStr = this.formatearFechaVisualizacion(fechaCreacion);
         const horaStr = this.formatearHoraVisualizacion(fechaCreacion);
-        
-        pdf.text(`FECHA DEL REPORTE: ${fechaStr}`, margen + 2, yPos);
+
+        pdf.text(`FECHA: ${fechaStr}`, margen + 2, yPos);
         pdf.text(`HORA: ${horaStr}`, margen + 100, yPos);
-        yPos += 4;
+        yPos += 5;
+
+        // 👈 UBICACIÓN CON FORMATO OPTIMIZADO (31 caracteres por línea)
+        let ubicacionCompleta = 'No especificada';
+
+        if (registro.sucursalInfo) {
+            const suc = registro.sucursalInfo;
+            const partes = [];
+            if (suc.ciudad) partes.push(suc.ciudad);
+            if (suc.estado) partes.push(suc.estado);
+            if (suc.direccion) partes.push(suc.direccion.substring(0, 60));
+            if (partes.length > 0) ubicacionCompleta = partes.join(', ');
+        } else if (registro.ubicacion && registro.ubicacion !== 'No especificada') {
+            ubicacionCompleta = registro.ubicacion;
+        } else if (registro.nombreEmpresaCC) {
+            ubicacionCompleta = registro.nombreEmpresaCC;
+        }
+
+        const MAX_CARACTERES_UBICACION = 31;
+        const lineasUbicacion = this.dividirTextoPorCaracteres(ubicacionCompleta, MAX_CARACTERES_UBICACION);
         
-        const ubicacion = registro.ubicacion || 'No especificada';
-        pdf.text(`UBICACIÓN: ${ubicacion}`, margen + 2, yPos);
-        yPos += this.alturasContenedores.datosGenerales - 11;
+        // Mostrar primera línea con el label
+        pdf.text(`UBICACIÓN: ${lineasUbicacion[0] || ''}`, margen + 2, yPos);
+        let yUbicacion = yPos + 4;
+        const xIndentado = margen + 13; // Alineado con el contenido después del label
         
-        // CLASIFICACIÓN
+        // Mostrar líneas adicionales indentadas
+        for (let i = 1; i < lineasUbicacion.length; i++) {
+            if (lineasUbicacion[i] && lineasUbicacion[i].trim() !== '') {
+                pdf.text(lineasUbicacion[i], xIndentado, yUbicacion);
+                yUbicacion += 4;
+            }
+        }
+        
+        // Calcular altura total usada por la ubicación
+        const alturaUbicacion = lineasUbicacion.length * 4;
+        yPos += Math.max(alturaUbicacion, this.alturasContenedores.datosGenerales - 10);
+        
+        // CLASIFICACIÓN DEL EVENTO
         pdf.setFillColor(coloresBase.fondo);
         pdf.rect(margen, yPos - 3, anchoContenido, this.alturasContenedores.clasificacion, 'F');
         pdf.setFont('helvetica', 'bold');
@@ -715,7 +835,7 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                 this.dibujarPiePagina(pdf);
                 pdf.addPage();
                 this.paginaActualReal++;
-                this.dibujarEncabezadoBase(pdf, 'INFORME DE MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
+                this.dibujarEncabezadoBase(pdf, 'MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
                 yPos = this.alturaEncabezado + 5;
             }
             
@@ -739,7 +859,7 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                 this.dibujarPiePagina(pdf);
                 pdf.addPage();
                 this.paginaActualReal++;
-                this.dibujarEncabezadoBase(pdf, 'INFORME DE MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
+                this.dibujarEncabezadoBase(pdf, 'MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
                 yPos = this.alturaEncabezado + 5;
             }
             
@@ -766,7 +886,7 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             this.dibujarPiePagina(pdf);
             pdf.addPage();
             this.paginaActualReal++;
-            this.dibujarEncabezadoBase(pdf, 'INFORME DE MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
+            this.dibujarEncabezadoBase(pdf, 'MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
             yPos = this.alturaEncabezado + 5;
         }
         
@@ -803,7 +923,7 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                 this.dibujarPiePagina(pdf);
                 pdf.addPage();
                 this.paginaActualReal++;
-                this.dibujarEncabezadoBase(pdf, 'INFORME DE MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
+                this.dibujarEncabezadoBase(pdf, 'MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
                 yPos = this.alturaEncabezado + 5;
             }
             
@@ -831,23 +951,33 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             yPos = yTextoDetalles + 5;
         }
         
-        // EVIDENCIAS FOTOGRÁFICAS
+        // EVIDENCIAS FOTOGRÁFICAS (CON COMENTARIOS)
         let evidencias = registro.evidencias || [];
         
         if (evidencias.length > 0) {
             const imgWidth = IMAGEN_CONFIG.TAMANIOS.IMAGEN_PRINCIPAL.ancho;
             const imgHeight = IMAGEN_CONFIG.TAMANIOS.IMAGEN_PRINCIPAL.alto;
             const espaciado = 12;
-            const anchoComentario = anchoContenido - imgWidth - espaciado;
             
             const evidenciasMostrar = Math.min(evidencias.length, 2);
-            const alturaTotalAnexos = 15 + (evidenciasMostrar * (imgHeight + espaciado));
+            let alturaTotalAnexos = 15;
+            
+            for (let i = 0; i < evidenciasMostrar; i++) {
+                const comentario = this.extraerComentario(evidencias[i]);
+                let alturaExtra = IMAGEN_CONFIG.ESPACIADO_COMENTARIO + 9;
+                if (comentario && comentario.trim() !== '') {
+                    const lineasCom = this.dividirTextoPorCaracteres(comentario, IMAGEN_CONFIG.MAX_CARACTERES_COMENTARIO);
+                    const lineas = Math.min(lineasCom.length, 4);
+                    alturaExtra += Math.min(lineas * IMAGEN_CONFIG.ALTURA_LINEA, 24);
+                }
+                alturaTotalAnexos += imgHeight + alturaExtra + espaciado;
+            }
             
             if (!this.verificarEspacio(pdf, yPos, alturaTotalAnexos)) {
                 this.dibujarPiePagina(pdf);
                 pdf.addPage();
                 this.paginaActualReal++;
-                this.dibujarEncabezadoBase(pdf, 'INFORME DE MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
+                this.dibujarEncabezadoBase(pdf, 'MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
                 yPos = this.alturaEncabezado + 5;
             }
             
@@ -861,16 +991,25 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             
             for (let i = 0; i < evidenciasMostrar; i++) {
                 const xPos = margen + 2;
-                const xComentario = xPos + imgWidth + espaciado;
+                const numeroImagen = i + 1;
                 
-                await this.procesarImagen(pdf, evidencias[i], xPos, yPos, imgWidth, imgHeight, xComentario, anchoComentario, i + 1, false, onProgress);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(this.fonts.mini);
+                pdf.setTextColor(100, 100, 100);
+                pdf.text(`Evidencia ${numeroImagen}`, xPos + 2, yPos - 3);
                 
-                yPos += imgHeight + espaciado;
+                const resultado = await this.dibujarImagenConComentario(pdf, evidencias[i], xPos, yPos, imgWidth, imgHeight, numeroImagen, imgWidth);
+                
+                yPos += resultado.alturaUtilizada + espaciado;
+                
+                if (onProgress) {
+                    onProgress(Math.min(95, 50 + (i / evidencias.length) * 30));
+                }
             }
             yPos += 5;
         }
         
-        // Evidencias restantes
+        // Evidencias restantes (a partir de la 3ra)
         if (evidencias.length > 2) {
             let evidenciasRestantes = evidencias.slice(2);
             let indiceEvidencia = 3;
@@ -878,14 +1017,22 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             const imgWidth = IMAGEN_CONFIG.TAMANIOS.IMAGEN_PRINCIPAL.ancho;
             const imgHeight = IMAGEN_CONFIG.TAMANIOS.IMAGEN_PRINCIPAL.alto;
             const espaciado = 12;
-            const anchoComentario = anchoContenido - imgWidth - espaciado;
             
             for (let i = 0; i < evidenciasRestantes.length; i++) {
-                if (!this.verificarEspacio(pdf, yPos, imgHeight + 25)) {
+                const comentario = this.extraerComentario(evidenciasRestantes[i]);
+                let alturaExtra = IMAGEN_CONFIG.ESPACIADO_COMENTARIO + 9;
+                if (comentario && comentario.trim() !== '') {
+                    const lineasCom = this.dividirTextoPorCaracteres(comentario, IMAGEN_CONFIG.MAX_CARACTERES_COMENTARIO);
+                    const lineas = Math.min(lineasCom.length, 4);
+                    alturaExtra += Math.min(lineas * IMAGEN_CONFIG.ALTURA_LINEA, 24);
+                }
+                const alturaNecesaria = imgHeight + alturaExtra + 25;
+                
+                if (!this.verificarEspacio(pdf, yPos, alturaNecesaria)) {
                     this.dibujarPiePagina(pdf);
                     pdf.addPage();
                     this.paginaActualReal++;
-                    this.dibujarEncabezadoBase(pdf, 'INFORME DE MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
+                    this.dibujarEncabezadoBase(pdf, 'MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
                     yPos = this.alturaEncabezado + 5;
                     
                     pdf.setFont('helvetica', 'bold');
@@ -896,11 +1043,15 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                 }
                 
                 const xPos = margen + 2;
-                const xComentario = xPos + imgWidth + espaciado;
                 
-                await this.procesarImagen(pdf, evidenciasRestantes[i], xPos, yPos, imgWidth, imgHeight, xComentario, anchoComentario, indiceEvidencia, false, onProgress);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(this.fonts.mini);
+                pdf.setTextColor(100, 100, 100);
+                pdf.text(`Evidencia ${indiceEvidencia}`, xPos + 2, yPos - 3);
                 
-                yPos += imgHeight + espaciado;
+                const resultado = await this.dibujarImagenConComentario(pdf, evidenciasRestantes[i], xPos, yPos, imgWidth, imgHeight, indiceEvidencia, imgWidth);
+                
+                yPos += resultado.alturaUtilizada + espaciado;
                 indiceEvidencia++;
             }
         }
@@ -915,7 +1066,7 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
                 this.dibujarPiePagina(pdf);
                 pdf.addPage();
                 this.paginaActualReal++;
-                this.dibujarEncabezadoBase(pdf, 'INFORME DE MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
+                this.dibujarEncabezadoBase(pdf, 'MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
                 yPos = this.alturaEncabezado + 5;
             }
             
@@ -970,7 +1121,7 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             this.dibujarPiePagina(pdf);
             pdf.addPage();
             this.paginaActualReal++;
-            this.dibujarEncabezadoBase(pdf, 'INFORME DE MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
+            this.dibujarEncabezadoBase(pdf, 'MERCANCÍA PERDIDA/ROBADA', `${registro.id} (Continuación)`);
             yPos = this.alturaEncabezado + 5;
         }
         
@@ -997,10 +1148,6 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
         this.dibujarPiePagina(pdf);
     }
     
-    // =============================================
-    // MÉTODO PRINCIPAL DE GENERACIÓN
-    // =============================================
-    
     async generarReporte(registro, opciones = {}) {
         try {
             const { 
@@ -1012,8 +1159,18 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
             } = opciones;
             
             if (diagnosticar) {
-                console.log('🔍 Ejecutando diagnóstico de imágenes...');
-                console.log('📸 Total evidencias:', registro.evidencias?.length || 0);
+               
+                
+                if (registro.evidencias && registro.evidencias.length > 0) {
+                    registro.evidencias.forEach((ev, i) => {
+                        const url = this.extraerUrlImagen(ev);
+                        
+                        const comentario = this.extraerComentario(ev);
+                        if (comentario) {
+                            
+                        }
+                    });
+                }
             }
             
             if (mostrarAlerta) {
@@ -1110,39 +1267,21 @@ class MercanciaPDFGenerator extends PDFBaseGenerator {
     }
     
     async diagnosticarEstructuraImagen(registro) {
-        console.log('===== DIAGNÓSTICO DE EVIDENCIAS =====');
+        
         
         let evidencias = registro.evidencias || [];
         
-        console.log(`📸 Total evidencias encontradas: ${evidencias.length}`);
         
-        for (let i = 0; i < Math.min(evidencias.length, 5); i++) {
-            const img = evidencias[i];
-            console.log(`\n🔍 Evidencia #${i + 1}:`);
-            console.log(`   Tipo: ${typeof img}`);
-            
-            const urlExtraida = this.extraerUrlImagen(img);
-            if (urlExtraida) {
-                const preview = urlExtraida.length > 100 ? urlExtraida.substring(0, 100) + '...' : urlExtraida;
-                console.log(`   URL extraída: ${preview}`);
-                
-                const comentario = this.extraerComentario(img);
-                if (comentario) {
-                    console.log(`   Comentario: ${comentario.substring(0, 50)}...`);
-                }
-            } else {
-                console.log(`   ❌ No se pudo extraer URL de la evidencia`);
-            }
-        }
         
-        console.log('\n===== FIN DIAGNÓSTICO =====');
+       
+        
         
         return {
-            totalEvidencias: evidencias.length
+            totalEvidencias: evidencias.length,
+            urlsEncontradas: evidencias.filter(e => this.extraerUrlImagen(e)).length
         };
     }
 }
 
-// Crear una instancia única para exportar
 export const generadorMercanciaPDF = new MercanciaPDFGenerator();
 export default generadorMercanciaPDF;

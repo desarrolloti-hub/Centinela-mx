@@ -11,6 +11,9 @@ import {
     query, 
     where, 
     orderBy,
+    limit,
+    startAfter,
+    getCountFromServer,
     serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
@@ -46,6 +49,9 @@ class Sucursal {
         
         this.latitud = data.latitud || '';
         this.longitud = data.longitud || '';
+        
+        // [MODIFICACIÓN NUEVA]: Números de emergencia
+        this.numerosEmergencia = data.numerosEmergencia || {};
         
         this.organizacionCamelCase = data.organizacionCamelCase || '';
         this.creadoPor = data.creadoPor || '';
@@ -152,6 +158,48 @@ class Sucursal {
         return this.contacto;
     }
 
+    // [MODIFICACIÓN NUEVA]: Métodos para números de emergencia
+    getNumerosEmergencia() {
+        return this.numerosEmergencia || {};
+    }
+
+    tieneNumerosEmergencia() {
+        return this.numerosEmergencia && Object.keys(this.numerosEmergencia).length > 0;
+    }
+
+    getNumeroEmergenciaPorServicio(servicio) {
+        if (!this.numerosEmergencia || !this.numerosEmergencia[servicio]) {
+            return null;
+        }
+        return this.numerosEmergencia[servicio];
+    }
+
+    agregarNumeroEmergencia(servicio, numero) {
+        if (!servicio || !numero) return false;
+        
+        if (!this.numerosEmergencia) {
+            this.numerosEmergencia = {};
+        }
+        
+        this.numerosEmergencia[servicio] = numero;
+        return true;
+    }
+
+    eliminarNumeroEmergencia(servicio) {
+        if (!this.numerosEmergencia || !this.numerosEmergencia[servicio]) {
+            return false;
+        }
+        
+        delete this.numerosEmergencia[servicio];
+        
+        // Si el objeto quedó vacío, lo establecemos como objeto vacío
+        if (Object.keys(this.numerosEmergencia).length === 0) {
+            this.numerosEmergencia = {};
+        }
+        
+        return true;
+    }
+
     getFechaCreacionFormateada() {
         return this._formatearFecha(this.fechaCreacion);
     }
@@ -180,6 +228,7 @@ class Sucursal {
             regionId: this.regionId,
             latitud: this.latitud,
             longitud: this.longitud,
+            numerosEmergencia: this.numerosEmergencia, // [MODIFICACIÓN NUEVA]
             organizacionCamelCase: this.organizacionCamelCase,
             creadoPor: this.creadoPor,
             creadoPorEmail: this.creadoPorEmail,
@@ -210,6 +259,8 @@ class Sucursal {
             longitud: this.longitud,
             coordenadas: this.getCoordenadas(),
             tieneCoordenadas: this.tieneCoordenadas(),
+            numerosEmergencia: this.getNumerosEmergencia(), // [MODIFICACIÓN NUEVA]
+            tieneNumerosEmergencia: this.tieneNumerosEmergencia(), // [MODIFICACIÓN NUEVA]
             fechaCreacion: this.getFechaCreacionFormateada(),
             fechaActualizacion: this.getFechaActualizacionFormateada(),
             creadoPor: this.creadoPorNombre || this.creadoPorEmail,
@@ -284,6 +335,12 @@ class SucursalManager {
             }
         }
 
+        // [MODIFICACIÓN NUEVA]: Los números de emergencia NO son obligatorios, no se validan
+        // Solo se valida si existen, que sea un objeto
+        if (sucursalData.numerosEmergencia && typeof sucursalData.numerosEmergencia !== 'object') {
+            errores.push('Los números de emergencia deben ser un objeto válido');
+        }
+
         return errores;
     }
 
@@ -334,6 +391,7 @@ class SucursalManager {
                 regionId: sucursalData.regionId,
                 latitud: sucursalData.latitud || '',
                 longitud: sucursalData.longitud || '',
+                numerosEmergencia: sucursalData.numerosEmergencia || {}, // [MODIFICACIÓN NUEVA]
                 organizacionCamelCase: organizacion,
                 creadoPor: usuarioActual.id,
                 creadoPorEmail: usuarioActual.correo || usuarioActual.email || '',
@@ -377,7 +435,8 @@ class SucursalManager {
                         ciudad: sucursalData.ciudad,
                         estado: sucursalData.estado,
                         regionId: sucursalData.regionId,
-                        regionNombre
+                        regionNombre,
+                        numerosEmergencia: sucursalData.numerosEmergencia || {} // [MODIFICACIÓN NUEVA]
                     }
                 });
             }
@@ -544,6 +603,8 @@ class SucursalManager {
                 ...(nuevosDatos.regionId && { regionId: nuevosDatos.regionId }),
                 ...(nuevosDatos.latitud !== undefined && { latitud: nuevosDatos.latitud }),
                 ...(nuevosDatos.longitud !== undefined && { longitud: nuevosDatos.longitud }),
+                // [MODIFICACIÓN NUEVA]: Actualizar números de emergencia si se proporcionan
+                ...(nuevosDatos.numerosEmergencia !== undefined && { numerosEmergencia: nuevosDatos.numerosEmergencia }),
                 fechaActualizacion: serverTimestamp(),
                 actualizadoPor: usuarioId
             };
@@ -577,6 +638,14 @@ class SucursalManager {
                     if (datosActuales.regionId !== nuevosDatos.regionId) {
                         cambios.push(`región: "${regionNombreActual}" → "${regionNombreNuevo}"`);
                     }
+                    // [MODIFICACIÓN NUEVA]: Registrar cambios en números de emergencia
+                    if (nuevosDatos.numerosEmergencia !== undefined) {
+                        const tieneCambios = JSON.stringify(datosActuales.numerosEmergencia || {}) !== 
+                                           JSON.stringify(nuevosDatos.numerosEmergencia || {});
+                        if (tieneCambios) {
+                            cambios.push('números de emergencia actualizados');
+                        }
+                    }
 
                     await historial.registrarActividad({
                         usuario: usuarioActual,
@@ -595,6 +664,7 @@ class SucursalManager {
                             estado: nuevosDatos.estado || datosActuales.estado,
                             regionId: nuevosDatos.regionId || datosActuales.regionId,
                             regionNombre: regionNombreNuevo,
+                            numerosEmergencia: nuevosDatos.numerosEmergencia || datosActuales.numerosEmergencia, // [MODIFICACIÓN NUEVA]
                             cambios
                         }
                     });
@@ -769,6 +839,252 @@ class SucursalManager {
             return 0;
         }
     }
+    // Agregar este método a la clase SucursalManager (después del método getTotalSucursales)
+
+    /**
+     * Obtiene el número de colaboradores asignados a una sucursal
+     * @param {string} sucursalId - ID de la sucursal
+     * @param {string} organizacionCamelCase - Organización en camelCase
+     * @returns {Promise<number>} - Número de colaboradores asignados
+     */
+    async getColaboradoresPorSucursal(sucursalId, organizacionCamelCase) {
+        try {
+            if (!sucursalId || !organizacionCamelCase) return 0;
+
+            const coleccionColaboradores = `colaboradores_${organizacionCamelCase}`;
+            
+            const q = query(
+                collection(db, coleccionColaboradores),
+                where("sucursalAsignadaId", "==", sucursalId),
+                where("status", "==", true)
+            );
+
+            // [MODIFICACIÓN]: Registrar LECTURA
+            await consumo.registrarFirestoreLectura(coleccionColaboradores, `colaboradores por sucursal ${sucursalId}`);
+
+            const snapshot = await getDocs(q);
+            return snapshot.size;
+
+        } catch (error) {
+            console.error('Error obteniendo colaboradores por sucursal:', error);
+            return 0;
+        }
+    }
+
+    /**
+     * Verifica si una sucursal puede recibir más colaboradores
+     * @param {string} sucursalId - ID de la sucursal
+     * @param {string} organizacionCamelCase - Organización en camelCase
+     * @returns {Promise<boolean>} - true si se puede asignar, false si ya tiene 2 colaboradores
+     */
+    async puedeAsignarColaborador(sucursalId, organizacionCamelCase) {
+        const colaboradores = await this.getColaboradoresPorSucursal(sucursalId, organizacionCamelCase);
+        return colaboradores < 2;
+    }
+
+    // Agregar estos métodos a la clase SucursalManager en sucursal.js
+    // Agregar estos métodos a la clase SucursalManager en sucursal.js (después del método getTotalSucursales)
+
+async getSucursalesPaginadas(organizacionCamelCase, filtros = {}, pagina = 1, itemsPorPagina = 10, cursores = null) {
+    try {
+        if (!organizacionCamelCase) {
+            throw new Error('Organización no especificada');
+        }
+
+        const collectionName = this._getCollectionName(organizacionCamelCase);
+        const sucursalesCollection = collection(db, collectionName);
+        
+        let constraints = [orderBy("fechaCreacion", "desc")];
+        
+        // Búsqueda por nombre (usando índice nombre + organizacionCamelCase)
+        if (filtros.termino && filtros.termino.length >= 2) {
+            constraints.push(where("nombre", ">=", filtros.termino));
+            constraints.push(where("nombre", "<=", filtros.termino + '\uf8ff'));
+        }
+        
+        // Paginación hacia adelante
+        if (pagina > 1 && cursores?.ultimoDocumento) {
+            constraints.push(startAfter(cursores.ultimoDocumento));
+        }
+        
+        constraints.push(limit(itemsPorPagina));
+        
+        const q = query(sucursalesCollection, ...constraints);
+        
+        await consumo.registrarFirestoreLectura(collectionName, `página ${pagina}`);
+        const snapshot = await getDocs(q);
+        
+        const sucursales = [];
+        let ultimoDoc = null;
+        let primerDoc = null;
+        
+        if (!snapshot.empty) {
+            ultimoDoc = snapshot.docs[snapshot.docs.length - 1];
+            primerDoc = snapshot.docs[0];
+            
+            snapshot.forEach(doc => {
+                try {
+                    const data = doc.data();
+                    const sucursal = new Sucursal(doc.id, {
+                        ...data,
+                        id: doc.id,
+                        fechaCreacion: data.fechaCreacion?.toDate?.() || data.fechaCreacion,
+                        fechaActualizacion: data.fechaActualizacion?.toDate?.() || data.fechaActualizacion
+                    });
+                    sucursales.push(sucursal);
+                } catch (error) {
+                    console.error('Error procesando sucursal:', error);
+                }
+            });
+        }
+        
+        // Contar total (con o sin filtro)
+        let total = 0;
+        if (filtros.termino && filtros.termino.length >= 2) {
+            const countQuery = query(sucursalesCollection, 
+                where("nombre", ">=", filtros.termino),
+                where("nombre", "<=", filtros.termino + '\uf8ff')
+            );
+            const countSnapshot = await getCountFromServer(countQuery);
+            total = countSnapshot.data().count;
+        } else {
+            const countQuery = query(sucursalesCollection);
+            const countSnapshot = await getCountFromServer(countQuery);
+            total = countSnapshot.data().count;
+        }
+        
+        return {
+            sucursales,
+            total,
+            paginaActual: pagina,
+            totalPaginas: Math.ceil(total / itemsPorPagina),
+            ultimoDocumento: ultimoDoc,
+            primerDocumento: primerDoc,
+            tieneMas: snapshot.docs.length === itemsPorPagina
+        };
+        
+    } catch (error) {
+        console.error('Error obteniendo sucursales paginadas:', error);
+        return {
+            sucursales: [],
+            total: 0,
+            paginaActual: pagina,
+            totalPaginas: 0,
+            ultimoDocumento: null,
+            primerDocumento: null,
+            tieneMas: false
+        };
+    }
+}
+
+async getSucursalesPaginaEspecifica(organizacionCamelCase, filtros = {}, paginaDeseada = 1, itemsPorPagina = 10) {
+    try {
+        if (paginaDeseada === 1) {
+            return await this.getSucursalesPaginadas(organizacionCamelCase, filtros, 1, itemsPorPagina);
+        }
+        
+        const collectionName = this._getCollectionName(organizacionCamelCase);
+        const sucursalesCollection = collection(db, collectionName);
+        
+        let constraints = [orderBy("fechaCreacion", "desc")];
+        
+        if (filtros.termino && filtros.termino.length >= 2) {
+            constraints.push(where("nombre", ">=", filtros.termino));
+            constraints.push(where("nombre", "<=", filtros.termino + '\uf8ff'));
+        }
+        
+        // Para páginas específicas, necesitamos saltar documentos
+        // Esto requiere una consulta adicional para obtener los documentos hasta la página deseada
+        if (paginaDeseada > 1) {
+            // Primero obtenemos los documentos hasta la página anterior
+            const skipQuery = query(sucursalesCollection, ...constraints, limit((paginaDeseada - 1) * itemsPorPagina));
+            const skipSnapshot = await getDocs(skipQuery);
+            
+            if (skipSnapshot.empty) {
+                return {
+                    sucursales: [],
+                    total: 0,
+                    paginaActual: paginaDeseada,
+                    totalPaginas: 0,
+                    ultimoDocumento: null,
+                    primerDocumento: null,
+                    tieneMas: false
+                };
+            }
+            
+            const lastDoc = skipSnapshot.docs[skipSnapshot.docs.length - 1];
+            constraints.push(startAfter(lastDoc));
+        }
+        
+        constraints.push(limit(itemsPorPagina));
+        
+        const q = query(sucursalesCollection, ...constraints);
+        
+        await consumo.registrarFirestoreLectura(collectionName, `página específica ${paginaDeseada}`);
+        const snapshot = await getDocs(q);
+        
+        const sucursales = [];
+        let ultimoDoc = null;
+        let primerDoc = null;
+        
+        if (!snapshot.empty) {
+            ultimoDoc = snapshot.docs[snapshot.docs.length - 1];
+            primerDoc = snapshot.docs[0];
+            
+            snapshot.forEach(doc => {
+                try {
+                    const data = doc.data();
+                    const sucursal = new Sucursal(doc.id, {
+                        ...data,
+                        id: doc.id,
+                        fechaCreacion: data.fechaCreacion?.toDate?.() || data.fechaCreacion,
+                        fechaActualizacion: data.fechaActualizacion?.toDate?.() || data.fechaActualizacion
+                    });
+                    sucursales.push(sucursal);
+                } catch (error) {
+                    console.error('Error procesando sucursal:', error);
+                }
+            });
+        }
+        
+        // Contar total
+        let total = 0;
+        if (filtros.termino && filtros.termino.length >= 2) {
+            const countQuery = query(sucursalesCollection, 
+                where("nombre", ">=", filtros.termino),
+                where("nombre", "<=", filtros.termino + '\uf8ff')
+            );
+            const countSnapshot = await getCountFromServer(countQuery);
+            total = countSnapshot.data().count;
+        } else {
+            const countQuery = query(sucursalesCollection);
+            const countSnapshot = await getCountFromServer(countQuery);
+            total = countSnapshot.data().count;
+        }
+        
+        return {
+            sucursales,
+            total,
+            paginaActual: paginaDeseada,
+            totalPaginas: Math.ceil(total / itemsPorPagina),
+            ultimoDocumento: ultimoDoc,
+            primerDocumento: primerDoc,
+            tieneMas: snapshot.docs.length === itemsPorPagina
+        };
+        
+    } catch (error) {
+        console.error('Error obteniendo página específica:', error);
+        return {
+            sucursales: [],
+            total: 0,
+            paginaActual: paginaDeseada,
+            totalPaginas: 0,
+            ultimoDocumento: null,
+            primerDocumento: null,
+            tieneMas: false
+        };
+    }
+}
 }
 
 const ESTADOS_MEXICO = [
