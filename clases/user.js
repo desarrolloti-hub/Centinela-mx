@@ -1797,7 +1797,7 @@ class UserManager {
                     telefono: data.telefono || '' // Nuevo campo
                 });
 
-                this.users.push(user);        
+                this.users.push(user);
                 return user;
             }
 
@@ -1982,7 +1982,7 @@ class UserManager {
             } catch (error) {
                 console.warn('No se pudo cargar el plan del colaborador:', error);
             }
-        }        
+        }
     }
 }
 
