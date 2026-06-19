@@ -48,21 +48,21 @@ async function generarSiguienteCodigoColaborador(organizacionCamelCase) {
     try {
         const userManager = new UserManager();
         const colaboradores = await userManager.getColaboradoresByOrganizacion(organizacionCamelCase, true);
-        
+
         // Extraer solo códigos válidos que no estén vacíos
         const codigosExistentes = colaboradores
             .map(col => col.codigoColaborador)
             .filter(cod => cod && /^\d{3}$/.test(cod))
             .map(cod => parseInt(cod, 10));
-        
+
         if (codigosExistentes.length === 0) {
             return '001';
         }
-        
+
         // Encontrar el número más alto
         const maxCodigo = Math.max(...codigosExistentes);
         let siguiente = maxCodigo + 1;
-        
+
         // Buscar huecos (por si hay códigos faltantes)
         for (let i = 1; i <= maxCodigo; i++) {
             if (!codigosExistentes.includes(i)) {
@@ -70,15 +70,15 @@ async function generarSiguienteCodigoColaborador(organizacionCamelCase) {
                 break;
             }
         }
-        
+
         // Límite máximo 999
         if (siguiente > 999) {
             return ''; // Retorna vacío si no hay más códigos disponibles
         }
-        
+
         // Formatear a 3 dígitos
         return siguiente.toString().padStart(3, '0');
-        
+
     } catch (error) {
         return '001';
     }
@@ -93,32 +93,32 @@ async function validarCodigoColaborador(codigo, organizacionCamelCase, idActual 
     if (!codigo || codigo.trim() === '') {
         return { valido: true, mensaje: '' };
     }
-    
+
     // Validar formato: 3 dígitos exactos
     if (!/^\d{3}$/.test(codigo)) {
         return { valido: false, mensaje: 'El código debe tener exactamente 3 dígitos (001-999)' };
     }
-    
+
     const numero = parseInt(codigo, 10);
     if (numero < 1 || numero > 999) {
         return { valido: false, mensaje: 'El código debe estar entre 001 y 999' };
     }
-    
+
     try {
         const userManager = new UserManager();
         const colaboradores = await userManager.getColaboradoresByOrganizacion(organizacionCamelCase, true);
-        
+
         // Verificar si el código ya existe (excluyendo al usuario actual en caso de edición)
-        const existe = colaboradores.some(col => 
+        const existe = colaboradores.some(col =>
             col.codigoColaborador === codigo && col.id !== idActual
         );
-        
+
         if (existe) {
             return { valido: false, mensaje: `El código ${codigo} ya está en uso por otro colaborador` };
         }
-        
+
         return { valido: true, mensaje: '' };
-        
+
     } catch (error) {
         return { valido: true, mensaje: '' };
     }
@@ -129,7 +129,7 @@ async function validarCodigoColaborador(codigo, organizacionCamelCase, idActual 
  */
 async function configurarCodigoColaborador(elements, organizacionCamelCase) {
     if (!elements.codigoColaborador) return;
-    
+
     // Solo generar código si el contenedor está visible
     const codigoContainer = elements.codigoNormalContainer;
     if (codigoContainer && codigoContainer.style.display !== 'none') {
@@ -139,15 +139,15 @@ async function configurarCodigoColaborador(elements, organizacionCamelCase) {
             elements.codigoColaborador.value = codigoGenerado;
         }
     }
-    
+
     // Validación en tiempo real (solo si el campo es visible)
-    elements.codigoColaborador.addEventListener('input', async function(e) {
+    elements.codigoColaborador.addEventListener('input', async function (e) {
         // Verificar si el contenedor está visible
         if (codigoContainer && codigoContainer.style.display === 'none') return;
-        
+
         // Limitar a solo números
         this.value = this.value.replace(/[^0-9]/g, '').slice(0, 3);
-        
+
         // Si está vacío, resetear estilos
         if (this.value.length === 0) {
             this.style.borderColor = '';
@@ -158,7 +158,7 @@ async function configurarCodigoColaborador(elements, organizacionCamelCase) {
             }
             return;
         }
-        
+
         // Validar formato solo si tiene contenido
         if (this.value.length === 3) {
             const validacion = await validarCodigoColaborador(this.value, organizacionCamelCase);
@@ -186,11 +186,11 @@ async function configurarCodigoColaborador(elements, organizacionCamelCase) {
             }
         }
     });
-    
+
     // Evento blur para validar al salir del campo
-    elements.codigoColaborador.addEventListener('blur', async function() {
+    elements.codigoColaborador.addEventListener('blur', async function () {
         if (codigoContainer && codigoContainer.style.display === 'none') return;
-        
+
         if (this.value.length > 0 && this.value.length !== 3) {
             this.value = '';
             this.style.borderColor = '';
@@ -476,7 +476,7 @@ async function cargarAreas(elements, usuario) {
         elements.cargoEnAreaSelect.disabled = true;
 
         const areas = await areaManager.getAreasByOrganizacion(usuario.organizacionCamelCase);
-        
+
         // ✅ FILTRAR: Solo áreas ACTIVAS (estado === 'activa')
         const areasActivas = areas.filter(area => area.estado === 'activa');
 
@@ -540,7 +540,7 @@ function cargarCargosPorArea(elements) {
 
     // Obtener todos los cargos del área
     const todosLosCargos = areaSeleccionada.getCargosAsArray ? areaSeleccionada.getCargosAsArray() : [];
-    
+
     // ✅ FILTRAR: Solo cargos ACTIVOS (estado === 'activo')
     const cargosActivos = todosLosCargos.filter(cargo => cargo.estado === 'activo');
 
@@ -564,7 +564,7 @@ function cargarCargosPorArea(elements) {
 
     // ⭐ VERIFICAR SI EL ÁREA ES "SUCURSALES" PARA MOSTRAR EL SELECTOR DE SUCURSAL
     const esAreaSucursales = areaNombre.toLowerCase() === 'sucursales' || areaNombre.toLowerCase() === 'sucursal';
-    
+
     if (esAreaSucursales) {
         // Ocultar campo de código normal y mostrar selector de sucursal
         if (elements.codigoNormalContainer) {
