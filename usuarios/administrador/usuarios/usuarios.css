@@ -293,12 +293,10 @@
     left: -50%;
     width: 200%;
     height: 200%;
-    background: linear-gradient(
-        to bottom right,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.1) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
+    background: linear-gradient(to bottom right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0) 100%);
     transform: rotate(30deg);
     transition: all 0.5s ease;
     opacity: 0;
@@ -349,7 +347,7 @@
     font-size: 13px;
 }
 
-.table > :not(caption) > * > * {
+.table> :not(caption)>*>* {
     background-color: transparent !important;
 }
 
@@ -510,12 +508,10 @@
     left: -50%;
     width: 200%;
     height: 200%;
-    background: linear-gradient(
-        to bottom right,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.1) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
+    background: linear-gradient(to bottom right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0) 100%);
     transform: rotate(30deg);
     transition: all 0.5s ease;
     opacity: 0;
@@ -677,7 +673,9 @@
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .error-content i {
@@ -993,14 +991,14 @@
         justify-content: flex-start;
         gap: 10px;
     }
-    
+
     .table td[data-label="ESTADO"]::before {
         width: auto;
         min-width: 80px;
         margin-bottom: 0;
     }
-    
-    .table td[data-label="ESTADO"] > * {
+
+    .table td[data-label="ESTADO"]>* {
         width: auto;
     }
 
@@ -1076,7 +1074,7 @@
         padding: 2px 8px;
         font-size: 0.6rem;
     }
-    
+
     .table td[data-label="ESTADO"]::before {
         min-width: 70px;
     }
@@ -1112,7 +1110,7 @@
         padding: 2px 6px;
         font-size: 0.55rem;
     }
-    
+
     .table td[data-label="ESTADO"]::before {
         min-width: 60px;
         font-size: 0.6rem;
