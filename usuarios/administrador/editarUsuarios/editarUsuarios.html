@@ -88,6 +88,7 @@
     <canvas id="particle-canvas"></canvas>
 
     <br>
+    <br>
     <div class="page-header">
         <h1>
             <i class="fas fa-users"></i> Editar Colaborador
@@ -214,7 +215,7 @@
                                     placeholder="Ingresa el nombre completo" required>
                             </div>
                         </div>
-                        
+
 
                         <!-- Correo electrónico (SOLO LECTURA) -->
                         <div class="form-field-group">
@@ -237,8 +238,8 @@
                                 <i class="fas fa-phone-alt"></i> TELÉFONO
                             </label>
                             <div class="input-wrapper">
-                                <input class="form-input-field" type="tel" id="telefono" 
-                                    placeholder="Ej: 5512345678" inputmode="numeric" pattern="[0-9]+" maxlength="15">
+                                <input class="form-input-field" type="tel" id="telefono" placeholder="Ej: 5512345678"
+                                    inputmode="numeric" pattern="[0-9]+" maxlength="15">
                             </div>
                             <div class="field-hint">
                                 <i class="fas fa-info-circle"></i> Solo números, sin espacios ni guiones
@@ -284,34 +285,38 @@
                             </div>
                         </div>
 
-                       <!-- CÓDIGO DEL COLABORADOR (NORMAL - PARA ÁREAS QUE NO SON SUCURSALES) -->
-<div class="form-field-group" id="codigoNormalContainer">
-    <label class="field-label" for="codigoColaborador">
-        <i class="fas fa-hashtag"></i> CÓDIGO DEL COLABORADOR <span style="font-weight: normal; font-size: 0.8rem;">(opcional)</span>
-    </label>
-    <div class="input-wrapper">
-        <input class="form-input-field" type="text" id="codigoColaborador"
-            placeholder="Código de 3 dígitos (001-999) - Opcional" maxlength="3" pattern="[0-9]{3}">
-    </div>
-    <div class="field-hint">
-        <i class="fas fa-info-circle"></i> Código único de 3 dígitos (001-999). Déjalo vacío si no quieres asignar código.
-    </div>
-</div>
+                        <!-- CÓDIGO DEL COLABORADOR (NORMAL - PARA ÁREAS QUE NO SON SUCURSALES) -->
+                        <div class="form-field-group" id="codigoNormalContainer">
+                            <label class="field-label" for="codigoColaborador">
+                                <i class="fas fa-hashtag"></i> CÓDIGO DEL COLABORADOR <span
+                                    style="font-weight: normal; font-size: 0.8rem;">(opcional)</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <input class="form-input-field" type="text" id="codigoColaborador"
+                                    placeholder="Código de 3 dígitos (001-999) - Opcional" maxlength="3"
+                                    pattern="[0-9]{3}">
+                            </div>
+                            <div class="field-hint">
+                                <i class="fas fa-info-circle"></i> Código único de 3 dígitos (001-999). Déjalo vacío si
+                                no quieres asignar código.
+                            </div>
+                        </div>
 
-<!-- SUCURSAL (SOLO SI EL ÁREA ES "SUCURSALES") - El ID de la sucursal será el código -->
-<div class="form-field-group" id="sucursalContainer" style="display: none;">
-    <label class="field-label" for="sucursalSelect">
-        <i class="fas fa-store"></i> SUCURSAL (CÓDIGO DEL COLABORADOR)
-    </label>
-    <div class="input-wrapper">
-        <select class="form-input-field" id="sucursalSelect">
-            <option value="">Selecciona una sucursal</option>
-        </select>
-    </div>
-    <div class="field-hint" id="sucursalHint">
-        <i class="fas fa-info-circle"></i> El ID de la sucursal se usará como código del colaborador
-    </div>
-</div>
+                        <!-- SUCURSAL (SOLO SI EL ÁREA ES "SUCURSALES") - El ID de la sucursal será el código -->
+                        <div class="form-field-group" id="sucursalContainer" style="display: none;">
+                            <label class="field-label" for="sucursalSelect">
+                                <i class="fas fa-store"></i> SUCURSAL (CÓDIGO DEL COLABORADOR)
+                            </label>
+                            <div class="input-wrapper">
+                                <select class="form-input-field" id="sucursalSelect">
+                                    <option value="">Selecciona una sucursal</option>
+                                </select>
+                            </div>
+                            <div class="field-hint" id="sucursalHint">
+                                <i class="fas fa-info-circle"></i> El ID de la sucursal se usará como código del
+                                colaborador
+                            </div>
+                        </div>
 
                         <!-- Status (EDITABLE) -->
                         <div class="form-field-group full-width">
@@ -355,6 +360,7 @@
             </div>
         </div>
     </div>
+
     <br>
     <!-- Scripts externos -->
     <script type="module" src="/components/autenticador.js"></script>

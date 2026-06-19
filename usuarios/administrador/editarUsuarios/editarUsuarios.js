@@ -23,14 +23,14 @@ document.addEventListener('DOMContentLoaded', async function () {
 async function inicializarManagers() {
     try {
         const { HistorialUsuarioManager } = await import('/clases/historialUsuario.js');
-        historialManager = new HistorialUsuarioManager();        
+        historialManager = new HistorialUsuarioManager();
     } catch (error) {
         console.error('Error inicializando historialManager:', error);
     }
 
     try {
         const { SucursalManager } = await import('/clases/sucursal.js');
-        sucursalManager = new SucursalManager();        
+        sucursalManager = new SucursalManager();
     } catch (error) {
         console.error('Error inicializando sucursalManager:', error);
     }
@@ -53,7 +53,7 @@ async function registrarEdicionColaborador(colaboradorOriginal, datosActualizado
                 cambios: cambios,
                 fechaEdicion: new Date().toISOString()
             }
-        });        
+        });
     } catch (error) {
         console.error('Error registrando edición de colaborador:', error);
     }
@@ -77,7 +77,7 @@ async function registrarCambioCodigo(colaborador, codigoAnterior, codigoNuevo, u
                 codigoNuevo: codigoNuevo || 'Sin código',
                 fechaCambio: new Date().toISOString()
             }
-        });    
+        });
     } catch (error) {
         console.error('Error registrando cambio de código:', error);
     }
@@ -101,7 +101,7 @@ async function registrarCambioTelefono(colaborador, telefonoAnterior, telefonoNu
                 telefonoNuevo: telefonoNuevo || 'No registrado',
                 fechaCambio: new Date().toISOString()
             }
-        });        
+        });
     } catch (error) {
         console.error('Error registrando cambio de teléfono:', error);
     }
@@ -123,7 +123,7 @@ async function registrarCambioFotoPerfil(colaborador, usuarioActual) {
                 colaboradorEmail: colaborador.correoElectronico,
                 fechaCambio: new Date().toISOString()
             }
-        });        
+        });
     } catch (error) {
         console.error('Error registrando cambio de foto de perfil:', error);
     }
@@ -145,7 +145,7 @@ async function registrarInhabilitacionColaborador(colaborador, usuarioActual) {
                 colaboradorEmail: colaborador.correoElectronico,
                 fechaInhabilitacion: new Date().toISOString()
             }
-        });        
+        });
     } catch (error) {
         console.error('Error registrando inhabilitación de colaborador:', error);
     }
@@ -181,30 +181,30 @@ async function validarCodigoColaboradorEdicion(codigo, organizacionCamelCase, co
     if (!codigo || codigo.trim() === '') {
         return { valido: true, mensaje: '' };
     }
-    
+
     if (!/^\d{3}$/.test(codigo)) {
         return { valido: false, mensaje: 'El código debe tener exactamente 3 dígitos (001-999)' };
     }
-    
+
     const numero = parseInt(codigo, 10);
     if (numero < 1 || numero > 999) {
         return { valido: false, mensaje: 'El código debe estar entre 001 y 999' };
     }
-    
+
     try {
         const userManager = new UserManager();
         const colaboradores = await userManager.getColaboradoresByOrganizacion(organizacionCamelCase, true);
-        
-        const existe = colaboradores.some(col => 
+
+        const existe = colaboradores.some(col =>
             col.codigoColaborador === codigo && col.id !== colaboradorIdActual
         );
-        
+
         if (existe) {
             return { valido: false, mensaje: `El código ${codigo} ya está en uso por otro colaborador` };
         }
-        
+
         return { valido: true, mensaje: '' };
-        
+
     } catch (error) {
         console.error('Error validando código:', error);
         return { valido: true, mensaje: '' };
@@ -213,17 +213,17 @@ async function validarCodigoColaboradorEdicion(codigo, organizacionCamelCase, co
 
 function configurarValidacionCodigo(elements, organizacionCamelCase, colaboradorId) {
     if (!elements.codigoColaborador) return;
-    
+
     const esCampoVisible = () => {
         const container = elements.codigoNormalContainer;
         return container && container.style.display !== 'none';
     };
-    
-    elements.codigoColaborador.addEventListener('input', async function(e) {
+
+    elements.codigoColaborador.addEventListener('input', async function (e) {
         if (!esCampoVisible()) return;
-        
+
         this.value = this.value.replace(/[^0-9]/g, '').slice(0, 3);
-        
+
         if (this.value.length === 0) {
             this.style.borderColor = '';
             const hint = this.closest('.form-field-group')?.querySelector('.field-hint');
@@ -233,7 +233,7 @@ function configurarValidacionCodigo(elements, organizacionCamelCase, colaborador
             }
             return;
         }
-        
+
         if (this.value.length === 3) {
             const validacion = await validarCodigoColaboradorEdicion(this.value, organizacionCamelCase, colaboradorId);
             if (!validacion.valido) {
@@ -260,10 +260,10 @@ function configurarValidacionCodigo(elements, organizacionCamelCase, colaborador
             }
         }
     });
-    
-    elements.codigoColaborador.addEventListener('blur', function() {
+
+    elements.codigoColaborador.addEventListener('blur', function () {
         if (!esCampoVisible()) return;
-        
+
         if (this.value.length > 0 && this.value.length !== 3) {
             this.value = '';
             this.style.borderColor = '';
@@ -308,7 +308,7 @@ async function iniciarEditor(userManager) {
         configurarEliminacion(elements, userManager);
         configurarSelectorStatus(elements);
         configurarFiltroNumerico(elements);
-        
+
         configurarValidacionCodigo(elements, usuarioActual.organizacionCamelCase, collaboratorId);
 
         await cargarAreas(elements);
@@ -461,7 +461,7 @@ async function cargarDatosColaborador(userManager, collaboratorId, elements) {
         if (!collaborator) {
             Swal.close();
             throw new Error('Colaborador no encontrado');
-        }  
+        }
 
         window.currentCollaborator = collaborator;
         window.colaboradorOriginal = JSON.parse(JSON.stringify(collaborator));
@@ -505,7 +505,7 @@ function actualizarInterfaz(elements, collaborator) {
     }
 
     if (elements.codigoColaborador) {
-        elements.codigoColaborador.value = collaborator.codigoColaborador || '';        
+        elements.codigoColaborador.value = collaborator.codigoColaborador || '';
     }
 
     if (elements.email && collaborator.correoElectronico) {
@@ -513,7 +513,7 @@ function actualizarInterfaz(elements, collaborator) {
     }
 
     if (elements.telefono) {
-        elements.telefono.value = collaborator.telefono || '';        
+        elements.telefono.value = collaborator.telefono || '';
     }
 
     if (elements.organizationName && collaborator.organizacion) {
@@ -710,7 +710,7 @@ function cargarCargosPorArea(elements) {
         elements.cargoEnAreaSelect.innerHTML = '<option value="">Esta área no tiene cargos activos</option>';
     } else {
         let options = '<option value="">Selecciona un cargo</option>';
-        
+
         cargosActivos.forEach((cargo, index) => {
             const cargoId = cargo.id || `cargo_${index}`;
             options += `<option value="${cargoId}">${cargo.nombre || 'Cargo sin nombre'}</option>`;
@@ -720,7 +720,7 @@ function cargarCargosPorArea(elements) {
             }
             elements.cargoEnAreaSelect._cargosData[cargoId] = cargo;
         });
-        
+
         elements.cargoEnAreaSelect.innerHTML = options;
     }
 
@@ -911,7 +911,7 @@ function previsualizarFoto(file, elements) {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 pendingPhotoBase64 = imageBase64;
-                
+
                 if (elements.profileImage) {
                     elements.profileImage.src = imageBase64;
                     elements.profileImage.style.display = 'block';
@@ -919,8 +919,8 @@ function previsualizarFoto(file, elements) {
                 if (elements.profilePlaceholder) {
                     elements.profilePlaceholder.style.display = 'none';
                 }
-                
-                mostrarMensaje(elements.mainMessage, 'success', 
+
+                mostrarMensaje(elements.mainMessage, 'success',
                     'Foto seleccionada. Recuerda guardar los cambios.');
             }
         });
@@ -970,19 +970,19 @@ function configurarGuardado(elements, userManager) {
                 Swal.fire({ icon: 'error', title: 'Código inválido', text: 'El código debe tener exactamente 3 dígitos (001-999)' });
                 return;
             }
-            
+
             const numero = parseInt(nuevoCodigo, 10);
             if (numero < 1 || numero > 999) {
                 Swal.fire({ icon: 'error', title: 'Código inválido', text: 'El código debe estar entre 001 y 999' });
                 return;
             }
-            
+
             const codigoValidacion = await validarCodigoColaboradorEdicion(
                 nuevoCodigo,
                 collaborator.organizacionCamelCase || usuarioActual.organizacionCamelCase,
                 collaborator.id
             );
-            
+
             if (!codigoValidacion.valido) {
                 Swal.fire({ icon: 'error', title: 'Código inválido', text: codigoValidacion.mensaje });
                 return;
@@ -1085,6 +1085,7 @@ function configurarGuardado(elements, userManager) {
                 codigoColaborador: nuevoCodigo,
                 status: nuevoEstado,
                 cargo: cargoObjeto,
+                cargoId: cargoObjeto?.id || null,
                 areaAsignadaId: areaId
             };
 
