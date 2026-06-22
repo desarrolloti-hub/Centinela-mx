@@ -143,7 +143,8 @@ const COLUMNAS_CONFIG = [
                 color: 'orange',
                 url: '/usuarios/colaboradores/crearIncidenciasRecuperacion/crearIncidenciasRecuperacion.html',
                 permisoEspecifico: 'crearIncidenciasRecuperacion'
-            }
+            },
+
         ]
     },
     {
@@ -238,8 +239,8 @@ const COLUMNAS_CONFIG = [
 // ========== INICIALIZACIÓN ==========
 document.addEventListener('DOMContentLoaded', async function () {
     try {
-        cargarUsuarioDesdeStorage();      
-        
+        cargarUsuarioDesdeStorage();
+
         if (!usuarioActual || !usuarioActual.id) {
             mostrarErrorSesion();
             return;
@@ -262,7 +263,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const { SucursalManager } = await import('/clases/sucursal.js');
         const { RegionManager } = await import('/clases/region.js');
         const { UserManager } = await import('/clases/user.js');
-        
+
         incidenciaManager = new IncidenciaManager();
         areaManager = new AreaManager();
         categoriaManager = new CategoriaManager();
@@ -628,27 +629,27 @@ async function cargarDatosKPIs() {
     if (permisosUsuario.incidencias && incidenciaManager) {
         await cargarMisIncidencias(organizacion, usuarioActual.id);
     }
-    
+
     // Usando AreaManager para contar áreas
     if (permisosUsuario.areas && areaManager) {
         await cargarConteoDesdeManager(areaManager, 'getAreasByOrganizacion', organizacion, 'areas');
     }
-    
+
     // Usando CategoriaManager para contar categorías
     if (permisosUsuario.categorias && categoriaManager) {
         await cargarConteoDesdeManager(categoriaManager, 'obtenerCategoriasPorOrganizacion', organizacion, 'categorias');
     }
-    
+
     // Usando SucursalManager para contar sucursales
     if (permisosUsuario.sucursales && sucursalManager) {
         await cargarConteoDesdeManager(sucursalManager, 'getSucursalesByOrganizacion', organizacion, 'sucursales');
     }
-    
+
     // Usando RegionManager para contar regiones
     if (permisosUsuario.regiones && regionManager) {
         await cargarConteoDesdeManager(regionManager, 'getRegionesByOrganizacion', organizacion, 'regiones');
     }
-    
+
     // Usando UserManager para contar colaboradores activos
     if (permisosUsuario.usuarios && userManager) {
         await cargarColaboradoresActivos(organizacion);
@@ -687,7 +688,7 @@ async function cargarMisIncidencias(organizacion, usuarioId) {
 async function cargarColaboradoresActivos(organizacion) {
     const numberElement = document.getElementById('kpi-number-usuarios');
     if (!numberElement || !userManager) return;
-    
+
     try {
         // Usar el método getColaboradoresByOrganizacion de UserManager
         // El segundo parámetro 'false' significa solo activos
