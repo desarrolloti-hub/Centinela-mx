@@ -2316,7 +2316,11 @@ class NavbarComplete {
                         </a>
                         <a href="/usuarios/administrador/categorias/categorias.html" class="administracion-dropdown-option">
                             <i class="fa-solid fa-tags"></i>
-                            <span>Categorías</span>
+                            <span>Catálogo de Incidencias</span>
+                        </a>
+                        <a href="/usuarios/administrador/riesgoNivel/riesgoNivel.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                            <span>Niveles de Riesgo</span>
                         </a>
                         <a href="/usuarios/administrador/sucursales/sucursales.html" class="administracion-dropdown-option">
                             <i class="fa-solid fa-store"></i>
@@ -2361,23 +2365,24 @@ class NavbarComplete {
                             <i class="fa-solid fa-share-alt"></i>
                             <span>Incidencias Canalizadas</span>
                         </a>
-                        <a href="/usuarios/administrador/estadisticas/estadisticas.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="listaIncidencias">
-                            <i class="fa-solid fa-chart-bar"></i>
-                            <span>Estadisticas Incidencias</span>
-                        </a>
+                        
                         <a href="/usuarios/administrador/mercanciaPerdida/mercanciaPerdida.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="listaIncidencias">
                             <i class="fa-solid fa-list"></i>
-                            <span>Lista de Extravios</span>
+                            <span>Lista de Recuperaciones</span>
                         </a>
                         <a href="/usuarios/administrador/crearIncidenciasRecuperacion/crearIncidenciasRecuperacion.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="incidenciasCanalizadas">
                             <i class="fa-solid fa-plus-circle"></i>
-                            <span>Crear Extravio</span>
+                            <span>Crear Recuperación</span>
+                        </a>
+                        <a href="/usuarios/administrador/estadisticas/estadisticas.html" class="administracion-dropdown-option incidencia-option" data-permiso-id="listaIncidencias">
+                            <i class="fa-solid fa-chart-bar"></i>
+                            <span>Estadisticas</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- SECCIÓN MONITOREO -->
-                <div class="nav-section" id="monitoreoSection">
+                 <!-- SECCIÓN MONITOREO -->
+              <div class="nav-section" id="monitoreoSection">
                     <button class="administracion-dropdown-btn" id="monitoreoDropdownBtn">
                         <span><i class="fa-solid fa-map-marker-alt"></i> Monitoreo</span>
                         <i class="fa-solid fa-chevron-down"></i>
@@ -2385,8 +2390,16 @@ class NavbarComplete {
 
                     <div class="administracion-dropdown-options" id="monitoreoDropdownOptions">
                         <a href="/usuarios/administrador/mapaAlertas/mapaAlertas.html" class="administracion-dropdown-option">
-                            <i class="fa-solid fa-map-marker-alt"></i>
+                              <i class="fa-solid fa-map-location-dot"></i>
                             <span>Mapa de Alertas</span>
+                        </a>
+                        <a href="/usuarios/administrador/monitoreo/monitoreo.html" class="administracion-dropdown-option">
+                            <i class="fa-solid fa-tachometer-alt"></i>
+                            <span>Monitoreo de Eventos</span>
+                        </a>                                                
+                        <a href="/usuarios/administrador/loginMonitoreo/loginMonitoreo.html" class="administracion-dropdown-option">
+                            <i class="fas fa-server"></i>
+                            <span>Gestión de Paneles</span>
                         </a>
                     </div>
                 </div>
@@ -2411,7 +2424,7 @@ class NavbarComplete {
                     </button>
 
                     <div class="admin-dropdown-options" id="adminDropdownOptions">
-                        <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
+                    <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
                             <i class="fa-solid fa-palette"></i>
                             <span>Personalización</span>
                         </a>
