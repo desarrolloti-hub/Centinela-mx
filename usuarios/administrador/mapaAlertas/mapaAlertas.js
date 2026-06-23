@@ -35,18 +35,7 @@ const CONFIG = {
         'medio': { color: '#ffbb33', icono: 'fa-exclamation-circle', texto: 'MEDIO', peso: 2 },
         'bajo': { color: '#00C851', icono: 'fa-info-circle', texto: 'BAJO', peso: 1 }
     },
-    heatmapConfig: {
-        radius: 20,
-        blur: 12,
-        maxZoom: 17,
-        minOpacity: 0.4,
-        gradient: {
-            0.0: '#00C851',
-            0.33: '#ffbb33',
-            0.66: '#ff8844',
-            1.0: '#ff4444'
-        }
-    }
+ 
 };
 
 // Estado global
@@ -71,12 +60,7 @@ let usuarioActual = null;
 let unsubscribeIncidencias = null;
 let isFirstSnapshot = true;
 
-// Variables para Heatmap (mejoradas)
-let heatmapLayer = null;
-let heatmapVisible = false;
-let puntosHeatmap = [];
-let heatmapCache = null;
-let heatmapDebounceTimer = null;
+
 
 // Cache de datos para el generador IPH
 let organizacionActual = null;
@@ -213,43 +197,7 @@ async function resaltarEstadoPorCoordenadas(lat, lng) {
     return null;
 }
 
-// Resaltar estados con actividad (para heatmap)
-async function resaltarEstadosConActividad() {
-    if (!capaEstados || puntosHeatmap.length === 0) return;
-    
-    const actividadPorEstado = new Map();
-    
-    for (const punto of puntosHeatmap) {
-        let estadoEncontrado = null;
-        capaEstados.eachLayer(layer => {
-            if (layer.getBounds && layer.getBounds().contains([punto.lat, punto.lng])) {
-                estadoEncontrado = layer;
-            }
-        });
-        
-        if (estadoEncontrado) {
-            const key = estadoEncontrado;
-            actividadPorEstado.set(key, (actividadPorEstado.get(key) || 0) + punto.intensity);
-        }
-    }
-    
-    const maxActividad = Math.max(...Array.from(actividadPorEstado.values()), 1);
-    
-    actividadPorEstado.forEach((actividad, layer) => {
-        const intensidad = 0.3 + (actividad / maxActividad) * 0.7;
-        const rojo = 255;
-        const verde = Math.floor(68 + (1 - intensidad) * 187);
-        const azul = Math.floor(68 + (1 - intensidad) * 187);
-        
-        layer.setStyle({
-            color: `rgb(${rojo}, ${verde}, ${azul})`,
-            weight: 2 + intensidad * 3,
-            opacity: 0.7 + intensidad * 0.3,
-            fillOpacity: intensidad * 0.15,
-            fillColor: `rgb(${rojo}, ${verde}, ${azul})`
-        });
-    });
-}
+
 
 // Limpiar resaltado de estado
 function limpiarResaltadoEstado() {
@@ -302,12 +250,6 @@ function aplicarMapaOscuro() {
             }
             .leaflet-control-attribution a {
                 color: #00cfff !important;
-            }
-            .estado-tooltip {
-                background: rgba(0, 0, 0, 0.85) !important;
-                color: #ffffff !important;
-                font-weight: bold !important;
-                border: 1px solid #ff4444 !important;
             }
         `;
         document.head.appendChild(style);
@@ -398,15 +340,14 @@ function inicializarBotonesPanel() {
     const controlPanel = document.querySelector('.control-panel');
     if (!controlPanel) return;
 
-    // Limpiar botones existentes para evitar duplicados
+    // Limpiar botones existentes
     const existingBtns = controlPanel.querySelectorAll('.control-btn');
     existingBtns.forEach(btn => btn.remove());
 
-    // Crear botones en orden
+    // Crear botones en orden (SIN el botón de heatmap)
     const botones = [
         { id: 'btnCentrarMapa', icon: 'fa-crosshairs', text: 'Centrar', onClick: centrarMapa },
         { id: 'btnRefrescarRegiones', icon: 'fa-sync-alt', text: 'Actualizar', onClick: refrescarRegiones },
-        { id: 'btnHeatmap', icon: 'fa-fire', text: 'Mapa de Calor', onClick: toggleHeatmap, special: true },
         { id: 'btnFullscreen', icon: 'fa-expand', text: 'Pantalla Completa', onClick: toggleFullscreen }
     ];
 
@@ -415,12 +356,6 @@ function inicializarBotonesPanel() {
         button.id = btn.id;
         button.className = 'control-btn';
         button.innerHTML = `<i class="fas ${btn.icon}"></i><span>${btn.text}</span>`;
-        
-        if (btn.special) {
-            button.style.background = 'linear-gradient(135deg, #ff4444, #ff8844)';
-            button.style.border = 'none';
-        }
-        
         button.addEventListener('click', btn.onClick);
         controlPanel.appendChild(button);
     });
@@ -553,28 +488,7 @@ async function registrarGeneracionPDF(incidenciaId, tipo, incidencia) {
     }
 }
 
-async function registrarActivacionHeatmap(activado, puntos) {
-    if (!historialManager) return;
 
-    try {
-        const usuario = obtenerUsuarioActual();
-        if (!usuario) return;
-
-        await historialManager.registrarActividad({
-            usuario: usuario,
-            tipo: 'leer',
-            modulo: 'mapa',
-            descripcion: activado ? 'Activó el mapa de calor' : 'Desactivó el mapa de calor',
-            detalles: {
-                accion: activado ? 'activar' : 'desactivar',
-                puntosHeatmap: activado ? puntos.length : 0,
-                fecha: new Date().toISOString()
-            }
-        });
-    } catch (error) {
-        console.error('Error registrando heatmap:', error);
-    }
-}
 
 async function registrarFiltroRegion(regionId, regionNombre, sucursalesMostradas) {
     if (!historialManager) return;
@@ -600,214 +514,6 @@ async function registrarFiltroRegion(regionId, regionNombre, sucursalesMostradas
     }
 }
 
-// =============================================
-// HEATMAP MEJORADO - GENERAR PUNTOS CON CACHÉ
-// =============================================
-function generarPuntosHeatmap(forceUpdate = false) {
-    if (heatmapCache && !forceUpdate && heatmapVisible) {
-        puntosHeatmap = heatmapCache;
-        return;
-    }
-
-    const nuevosPuntos = [];
-    const ahora = new Date();
-    
-    incidencias.forEach(inc => {
-        const sucursal = sucursalesMap.get(inc.sucursalId);
-        if (sucursal && sucursal.latitud && sucursal.longitud) {
-            const nivel = CONFIG.nivelesRiesgo[inc.nivelRiesgo];
-            let intensidad = nivel?.peso || 1;
-            
-            const fechaInc = new Date(inc.fecha);
-            const horasDiff = (ahora - fechaInc) / (1000 * 60 * 60);
-            
-            if (horasDiff < 1) {
-                intensidad *= 2.0;
-            } else if (horasDiff < 6) {
-                intensidad *= 1.5;
-            } else if (horasDiff < 24) {
-                intensidad *= 1.2;
-            } else if (horasDiff > 72) {
-                intensidad *= 0.7;
-            }
-            
-            if (inc.estado === 'pendiente') {
-                intensidad *= 1.3;
-            }
-            
-            nuevosPuntos.push({
-                lat: parseFloat(sucursal.latitud),
-                lng: parseFloat(sucursal.longitud),
-                intensity: Math.min(intensidad, 5)
-            });
-        }
-    });
-    
-    puntosHeatmap = nuevosPuntos;
-    heatmapCache = [...nuevosPuntos];
-}
-
-function crearHeatmapLayer() {
-    return new Promise((resolve, reject) => {
-        if (typeof L.heatLayer !== 'undefined') {
-            resolve(L.heatLayer(puntosHeatmap, CONFIG.heatmapConfig));
-            return;
-        }
-        
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js';
-        script.onload = () => {
-            resolve(L.heatLayer(puntosHeatmap, CONFIG.heatmapConfig));
-        };
-        script.onerror = () => {
-            reject(new Error('No se pudo cargar la librería de heatmap'));
-        };
-        document.head.appendChild(script);
-    });
-}
-
-function actualizarHeatmap() {
-    if (!heatmapVisible) return;
-    
-    if (heatmapDebounceTimer) clearTimeout(heatmapDebounceTimer);
-    
-    heatmapDebounceTimer = setTimeout(async () => {
-        generarPuntosHeatmap(true);
-        
-        if (heatmapLayer && mapa && mapa.hasLayer(heatmapLayer)) {
-            mapa.removeLayer(heatmapLayer);
-        }
-        
-        try {
-            heatmapLayer = await crearHeatmapLayer();
-            if (heatmapLayer && mapa && heatmapVisible) {
-                heatmapLayer.addTo(mapa);
-            }
-        } catch (error) {
-            console.error('Error actualizando heatmap:', error);
-        }
-        
-        heatmapDebounceTimer = null;
-    }, 300);
-}
-
-// =============================================
-// TOGGLE HEATMAP - CON OCULTAR SUCURSALES Y MAPA OSCURO
-// =============================================
-// =============================================
-// TOGGLE HEATMAP - VERSIÓN COMPLETA CON ESTADOS
-// =============================================
-async function toggleHeatmap() {
-    const btn = document.getElementById('btnHeatmap');
-    if (!btn) return;
-
-    if (!heatmapVisible) {
-        if (puntosHeatmap.length === 0) {
-            generarPuntosHeatmap(true);
-        }
-
-        if (puntosHeatmap.length === 0) {
-            Swal.fire({
-                icon: 'info',
-                title: 'Sin datos',
-                text: 'No hay incidencias para mostrar en el mapa de calor',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000
-            });
-            return;
-        }
-
-        try {
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Cargando...</span>';
-            btn.disabled = true;
-            
-            // Cargar capa de estados
-            await cargarCapaEstados();
-            
-            // Ocultar sucursales
-            ocultarTodosLosMarcadores();
-            
-            // Cambiar a mapa oscuro con letras blancas
-            aplicarMapaOscuro();
-            
-            // Agregar capa de estados
-            if (capaEstados && !mapa.hasLayer(capaEstados)) {
-                capaEstados.addTo(mapa);
-            }
-            
-            // Crear y mostrar heatmap
-            heatmapLayer = await crearHeatmapLayer();
-            
-            if (heatmapLayer && mapa) {
-                heatmapLayer.addTo(mapa);
-                heatmapVisible = true;
-                btn.style.background = 'linear-gradient(135deg, #ff8844, #ff4444)';
-                btn.style.boxShadow = '0 0 15px rgba(255, 68, 68, 0.5)';
-                btn.innerHTML = '<i class="fas fa-fire"></i><span>Ocultar Calor</span>';
-                
-                // Resaltar estados con actividad
-                await resaltarEstadosConActividad();
-                
-                await registrarActivacionHeatmap(true, puntosHeatmap);
-                
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Mapa de Calor Activado',
-                    text: `Mostrando ${puntosHeatmap.length} zonas con intensidad`,
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 2000
-                });
-            }
-        } catch (error) {
-            console.error('Error activando heatmap:', error);
-            mostrarTodosLosMarcadores();
-            restaurarMapaNormal();
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudo cargar el mapa de calor',
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)'
-            });
-        } finally {
-            btn.disabled = false;
-        }
-
-    } else {
-        // Desactivar heatmap
-        if (heatmapLayer && mapa && mapa.hasLayer(heatmapLayer)) {
-            mapa.removeLayer(heatmapLayer);
-        }
-        heatmapVisible = false;
-        btn.style.background = 'linear-gradient(135deg, #ff4444, #ff8844)';
-        btn.style.boxShadow = 'none';
-        btn.innerHTML = '<i class="fas fa-fire"></i><span>Mapa de Calor</span>';
-        
-        // Quitar capa de estados
-        if (capaEstados && mapa.hasLayer(capaEstados)) {
-            mapa.removeLayer(capaEstados);
-        }
-        
-        limpiarResaltadoEstado();
-        mostrarTodosLosMarcadores();
-        restaurarMapaNormal();
-
-        await registrarActivacionHeatmap(false, []);
-
-        Swal.fire({
-            icon: 'info',
-            title: 'Mapa de Calor Oculto',
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 1500
-        });
-    }
-}
 
 
 
@@ -1858,49 +1564,15 @@ function cerrarDropdown() {
     if (btn) btn.classList.remove('active');
 }
 
-// =============================================
-// CENTRAR MAPA
-// =============================================
-// =============================================
-// CENTRAR MAPA (modificado para heatmap)
-// =============================================
 function centrarMapa() {
     if (!mapa) return;
     
-    // Si el heatmap está activo, centrar en los puntos de calor
-    if (heatmapVisible && puntosHeatmap.length > 0) {
-        // Calcular el centro de los puntos de calor
-        let sumLat = 0, sumLng = 0;
-        puntosHeatmap.forEach(p => {
-            sumLat += p.lat;
-            sumLng += p.lng;
-        });
-        const centroLat = sumLat / puntosHeatmap.length;
-        const centroLng = sumLng / puntosHeatmap.length;
-        
-        // Encontrar los bounds de los puntos
-        let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
-        puntosHeatmap.forEach(p => {
-            minLat = Math.min(minLat, p.lat);
-            maxLat = Math.max(maxLat, p.lat);
-            minLng = Math.min(minLng, p.lng);
-            maxLng = Math.max(maxLng, p.lng);
-        });
-        
-        if (isFinite(minLat) && isFinite(maxLat)) {
-            const bounds = L.latLngBounds([minLat, minLng], [maxLat, maxLng]);
-            mapa.fitBounds(bounds.pad(0.2));
-        } else {
-            mapa.setView([centroLat, centroLng], CONFIG.zoom);
-        }
+    // Comportamiento normal
+    const todos = Object.values(marcadores.sucursales);
+    if (todos.length) {
+        mapa.fitBounds(L.featureGroup(todos).getBounds().pad(0.1));
     } else {
-        // Comportamiento normal: centrar en sucursales
-        const todos = Object.values(marcadores.sucursales);
-        if (todos.length) {
-            mapa.fitBounds(L.featureGroup(todos).getBounds().pad(0.1));
-        } else {
-            mapa.setView(CONFIG.centro, CONFIG.zoom);
-        }
+        mapa.setView(CONFIG.centro, CONFIG.zoom);
     }
 }
 

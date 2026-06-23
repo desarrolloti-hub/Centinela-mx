@@ -1,0 +1,1204 @@
+/* =============================================
+   sucursalDetalle.css - ULTRA RESPONSIVE
+   Versión final: Gráfica → Tabla → Tarjetas
+   Sin emojis - Profesional
+   ============================================= */
+
+/* =============================================
+   RESET Y CONFIGURACIÓN BASE
+   ============================================= */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    background: var(--color-bg-primary);
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    color: var(--color-text-secondary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+}
+
+#particle-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* =============================================
+   VARIABLES GLOBALES RESPONSIVE
+   ============================================= */
+:root {
+    --breakpoint-xs: 380px;
+    --breakpoint-sm: 480px;
+    --breakpoint-md: 640px;
+    --breakpoint-tablet: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1280px;
+    --breakpoint-2xl: 1536px;
+    
+    --font-size-h1: clamp(1.2rem, 5vw, 2rem);
+    --font-size-h2: clamp(1rem, 4vw, 1.5rem);
+    --font-size-h3: clamp(0.9rem, 3.5vw, 1.3rem);
+    --font-size-body: clamp(0.7rem, 3vw, 0.9rem);
+    --font-size-small: clamp(0.6rem, 2.5vw, 0.75rem);
+    --font-size-xs: clamp(0.55rem, 2vw, 0.65rem);
+}
+
+/* =============================================
+   CONTENEDOR PRINCIPAL
+   ============================================= */
+.detalle-container {
+    position: relative;
+    z-index: 1;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: clamp(10px, 3vw, 30px);
+    width: 100%;
+    overflow-x: hidden;
+}
+
+/* =============================================
+   HEADER ACTIONS
+   ============================================= */
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: clamp(10px, 2vw, 20px);
+    margin-bottom: clamp(15px, 3vw, 30px);
+}
+
+.btn-volver {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
+    border: 1px solid var(--color-accent-primary);
+    border-radius: clamp(6px, 1.5vw, 10px);
+    padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 20px);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: var(--font-size-small);
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: clamp(6px, 1.5vw, 10px);
+    transition: all 0.3s ease;
+}
+
+@media (max-width: 640px) {
+    .btn-volver {
+        justify-content: center;
+        width: 100%;
+    }
+}
+
+.btn-volver:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(192, 192, 192, 0.3);
+    border-color: #ffffff;
+}
+
+/* =============================================
+   SELECTOR DE SUCURSAL
+   ============================================= */
+.sucursal-selector {
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 2vw, 15px);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-light);
+    border-radius: clamp(10px, 2vw, 16px);
+    padding: clamp(6px, 1.5vw, 10px) clamp(10px, 2vw, 16px);
+    backdrop-filter: blur(10px);
+    flex-wrap: wrap;
+}
+
+.sucursal-selector label {
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sucursal-selector .filtro-select {
+    background: var(--color-bg-tertiary, rgba(0, 0, 0, 0.3));
+    border: 1px solid var(--color-border-light);
+    border-radius: clamp(6px, 1.5vw, 10px);
+    padding: clamp(6px, 1.5vw, 10px) clamp(10px, 2vw, 14px);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    font-size: clamp(0.75rem, 2.5vw, 0.9rem);
+    cursor: pointer;
+    min-width: clamp(140px, 25vw, 220px);
+    transition: all 0.2s ease;
+}
+
+@media (max-width: 640px) {
+    .sucursal-selector {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .sucursal-selector .filtro-select {
+        flex: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .sucursal-selector {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .sucursal-selector .filtro-select {
+        width: 100%;
+        min-width: auto;
+    }
+}
+
+/* =============================================
+   BOTÓN PDF
+   ============================================= */
+.btn-pdf-sucursal {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
+    border: 1px solid #c0392b;
+    border-radius: clamp(6px, 1.5vw, 10px);
+    padding: clamp(8px, 2vw, 12px) clamp(15px, 3vw, 24px);
+    color: #c0392b;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: var(--font-size-small);
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: clamp(6px, 1.5vw, 10px);
+    transition: all 0.3s ease;
+}
+
+@media (max-width: 640px) {
+    .btn-pdf-sucursal {
+        justify-content: center;
+        width: 100%;
+    }
+}
+
+.btn-pdf-sucursal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(192, 57, 43, 0.3);
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+/* =============================================
+   HEADER SUCURSAL
+   ============================================= */
+.sucursal-header {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-light);
+    border-radius: clamp(16px, 3vw, 24px);
+    padding: clamp(16px, 3vw, 28px);
+    margin-bottom: clamp(20px, 4vw, 40px);
+    display: flex;
+    align-items: center;
+    gap: clamp(15px, 3vw, 25px);
+    backdrop-filter: blur(10px);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.sucursal-icon {
+    width: clamp(50px, 10vw, 80px);
+    height: clamp(50px, 10vw, 80px);
+    background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(59,130,246,0.05));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(1.5rem, 5vw, 2.5rem);
+    color: var(--color-accent-primary);
+    flex-shrink: 0;
+}
+
+.sucursal-info {
+    flex: 1;
+    min-width: 200px;
+    text-align: center;
+}
+
+.sucursal-info h1 {
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: var(--font-size-h1);
+    color: var(--color-text-primary);
+    margin-bottom: clamp(6px, 1.5vw, 10px);
+    word-break: break-word;
+}
+
+.sucursal-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(10px, 2vw, 20px);
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+    justify-content: center;
+}
+
+.sucursal-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.sucursal-meta i {
+    color: var(--color-accent-primary);
+}
+
+.region-badge {
+    background: rgba(59,130,246,0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+@media (max-width: 550px) {
+    .sucursal-meta {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+}
+
+/* =============================================
+   KPIs GRID
+   ============================================= */
+.kpis-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: clamp(10px, 2vw, 20px);
+    margin-bottom: clamp(20px, 4vw, 40px);
+}
+
+.kpi-card {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-light);
+    border-radius: clamp(12px, 2vw, 20px);
+    padding: clamp(12px, 2vw, 20px);
+    display: flex;
+    align-items: center;
+    gap: clamp(10px, 2vw, 16px);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.kpi-icon {
+    width: clamp(40px, 8vw, 60px);
+    height: clamp(40px, 8vw, 60px);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(1rem, 3vw, 1.5rem);
+    flex-shrink: 0;
+}
+
+.kpi-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.kpi-info h3 {
+    font-size: clamp(1.1rem, 5vw, 2rem);
+    font-weight: 800;
+    color: white;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    line-height: 1.2;
+    word-break: break-word;
+}
+
+.kpi-info p {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+    .kpis-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .kpis-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =============================================
+   CARDS Y GRID DE GRÁFICAS
+   ============================================= */
+.card {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-light);
+    border-radius: clamp(14px, 2.5vw, 20px);
+    overflow: hidden;
+    backdrop-filter: blur(5px);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.card-header {
+    background: linear-gradient(135deg, rgba(20,20,20,0.98), rgba(30,30,30,0.95));
+    border-bottom: 1px solid var(--color-border-light);
+    padding: clamp(10px, 2vw, 16px) clamp(12px, 2.5vw, 20px);
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.card-header h5 {
+    color: var(--color-text-primary);
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: clamp(0.65rem, 2vw, 0.85rem);
+    text-transform: uppercase;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 1.5vw, 10px);
+    flex-wrap: wrap;
+}
+
+.card-header h5 i {
+    color: var(--color-accent-primary);
+}
+
+.card-body {
+    padding: clamp(12px, 3vw, 25px);
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: auto;
+}
+
+
+
+
+/* =============================================
+   GRÁFICA DE RIESGO - ALTA RESOLUCIÓN
+   ============================================= */
+
+/* La card que contiene la gráfica */
+.card:has(#graficoRiesgoSucursal) {
+    min-height: 480px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* El body de la card */
+.card:has(#graficoRiesgoSucursal) .card-body {
+    flex: 1;
+    min-height: 420px;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* El canvas - configuración nítida */
+#graficoRiesgoSucursal {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 380px;
+    max-height: 500px;
+    display: block;
+    image-rendering: crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+/* Desktop grande (4K) */
+@media (min-width: 1920px) {
+    .card:has(#graficoRiesgoSucursal) {
+        min-height: 600px;
+    }
+    .card:has(#graficoRiesgoSucursal) .card-body {
+        min-height: 540px;
+    }
+    #graficoRiesgoSucursal {
+        min-height: 500px;
+        max-height: 580px;
+    }
+}
+
+/* Desktop normal */
+@media (min-width: 1024px) and (max-width: 1919px) {
+    .card:has(#graficoRiesgoSucursal) {
+        min-height: 520px;
+    }
+    .card:has(#graficoRiesgoSucursal) .card-body {
+        min-height: 470px;
+    }
+    #graficoRiesgoSucursal {
+        min-height: 430px;
+        max-height: 480px;
+    }
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+    .card:has(#graficoRiesgoSucursal) {
+        min-height: 420px;
+    }
+    .card:has(#graficoRiesgoSucursal) .card-body {
+        min-height: 380px;
+        padding: 15px;
+    }
+    #graficoRiesgoSucursal {
+        min-height: 350px;
+        max-height: 400px;
+    }
+}
+
+/* Móvil grande */
+@media (max-width: 550px) {
+    .card:has(#graficoRiesgoSucursal) {
+        min-height: 380px;
+    }
+    .card:has(#graficoRiesgoSucursal) .card-body {
+        min-height: 340px;
+        padding: 12px;
+    }
+    #graficoRiesgoSucursal {
+        min-height: 320px;
+        max-height: 360px;
+    }
+}
+
+/* Móvil pequeño */
+@media (max-width: 380px) {
+    .card:has(#graficoRiesgoSucursal) {
+        min-height: 350px;
+    }
+    .card:has(#graficoRiesgoSucursal) .card-body {
+        min-height: 310px;
+        padding: 10px;
+    }
+    #graficoRiesgoSucursal {
+        min-height: 290px;
+        max-height: 330px;
+    }
+}
+
+/* Orientación landscape (móvil horizontal) */
+@media (max-height: 500px) and (orientation: landscape) {
+    .card:has(#graficoRiesgoSucursal) {
+        min-height: 320px;
+    }
+    .card:has(#graficoRiesgoSucursal) .card-body {
+        min-height: 280px;
+        padding: 10px;
+    }
+    #graficoRiesgoSucursal {
+        min-height: 260px;
+        max-height: 300px;
+    }
+}
+
+/* Hacer que la primera fila dé más espacio a la gráfica */
+.charts-row {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr;
+    gap: 25px;
+    margin-bottom: 35px;
+}
+
+@media (max-width: 768px) {
+    .charts-row {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+/* =============================================
+   TABLA DE CATEGORÍAS - MÁS GRANDE
+   ============================================= */
+.tabla-categorias {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-small);
+}
+
+.tabla-categorias th,
+.tabla-categorias td {
+    padding: clamp(8px, 1.5vw, 12px) clamp(10px, 2vw, 16px);
+    text-align: left;
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.tabla-categorias th {
+    background: rgba(0, 0, 0, 0.6);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tabla-categorias tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.tabla-categorias td:nth-child(2) {
+    font-weight: 700;
+    color: #3b82f6;
+}
+
+.tabla-categorias td:nth-child(3) {
+    font-weight: 600;
+    color: #10b981;
+}
+
+/* Hacer más grande la tarjeta de Categorías más reportadas */
+#tablaCategoriasSucursal {
+    font-size: 0.85rem;
+}
+
+#tablaCategoriasSucursal th {
+    font-size: 0.75rem;
+    padding: 14px 16px;
+}
+
+#tablaCategoriasSucursal td {
+    padding: 12px 16px;
+}
+
+/* Contenedor de la tabla de categorías con más altura */
+.card:has(#tablaCategoriasSucursal) .table-responsive-mini {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#tablaCategoriasSucursal {
+    width: 100%;
+    font-size: 0.9rem;
+}
+
+#tablaCategoriasSucursal th,
+#tablaCategoriasSucursal td {
+    padding: 14px 18px;
+}
+
+#tablaCategoriasSucursal th {
+    font-size: 0.8rem;
+    padding: 14px 18px;
+}
+
+#tablaCategoriasSucursal td {
+    padding: 12px 18px;
+}
+
+/* Más grande aún en desktop */
+@media (min-width: 1024px) {
+    #tablaCategoriasSucursal th,
+    #tablaCategoriasSucursal td {
+        padding: 16px 22px;
+    }
+    
+    #tablaCategoriasSucursal {
+        font-size: 1rem;
+    }
+    
+    #tablaCategoriasSucursal th {
+        font-size: 0.85rem;
+    }
+}
+
+/* En móvil la tabla de categorías sigue siendo tabla con scroll horizontal */
+@media (max-width: 640px) {
+    .card:has(#tablaCategoriasSucursal) .table-responsive-mini {
+        overflow-x: auto;
+    }
+    
+    #tablaCategoriasSucursal {
+        min-width: 380px;
+        font-size: 0.8rem;
+    }
+    
+    #tablaCategoriasSucursal th,
+    #tablaCategoriasSucursal td {
+        padding: 10px 14px;
+    }
+}
+
+/* =============================================
+   GRÁFICA DE PÉRDIDAS VS RECUPERACIONES
+   ============================================= */
+#graficoPerdidasRecuperacion {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 280px;
+}
+
+.card:has(#graficoPerdidasRecuperacion) .card-body {
+    min-height: 300px;
+}
+
+@media (max-width: 768px) {
+    .card:has(#graficoPerdidasRecuperacion) .card-body {
+        min-height: 280px;
+    }
+}
+
+/* =============================================
+   TIEMPO PROMEDIO
+   ============================================= */
+.tiempo-promedio-container {
+    text-align: center;
+    width: 100%;
+}
+
+.tiempo-valor {
+    font-size: clamp(2rem, 10vw, 3.5rem);
+    font-weight: 800;
+    color: white;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+}
+
+.tiempo-unidad {
+    font-size: var(--font-size-body);
+    color: var(--color-text-secondary);
+    margin-bottom: 15px;
+}
+
+.tiempo-bar {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+    margin: 12px 0;
+    width: 100%;
+}
+
+.tiempo-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.5s ease;
+}
+
+.tiempo-leyenda {
+    display: flex;
+    justify-content: center;
+    gap: clamp(10px, 3vw, 20px);
+    font-size: var(--font-size-xs);
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+/* =============================================
+   INCIDENCIAS RECIENTES - TABLA (DESKTOP)
+   ============================================= */
+.incidencias-tabla-container {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.tabla-incidencias {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-small);
+}
+
+.tabla-incidencias th,
+.tabla-incidencias td {
+    padding: clamp(8px, 1.5vw, 12px) clamp(10px, 2vw, 14px);
+    text-align: left;
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.tabla-incidencias th {
+    background: rgba(0, 0, 0, 0.6);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tabla-incidencias td:first-child {
+    font-family: monospace;
+    font-size: var(--font-size-xs);
+    word-break: break-all;
+    max-width: 200px;
+}
+
+.tabla-incidencias td:last-child {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.tabla-incidencias tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* =============================================
+   INCIDENCIAS RECIENTES - TARJETAS (MÓVIL)
+   ============================================= */
+.incidencias-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Desktop (>768px) - Mostrar tabla, ocultar tarjetas */
+@media (min-width: 769px) {
+    .incidencias-grid {
+        display: none !important;
+    }
+    .incidencias-tabla-container {
+        display: block !important;
+    }
+}
+
+/* Móvil (≤768px) - Mostrar tarjetas, ocultar tabla */
+@media (max-width: 768px) {
+    .incidencias-tabla-container {
+        display: none !important;
+    }
+    .incidencias-grid {
+        display: flex !important;
+        flex-direction: column;
+        gap: 12px;
+    }
+}
+
+/* Estilos de cada tarjeta */
+.incidencia-card {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.3));
+    border: 1px solid var(--color-border-light);
+    border-radius: 14px;
+    padding: 14px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.incidencia-card:hover {
+    transform: translateX(4px);
+    border-color: var(--color-accent-primary);
+}
+
+.incidencia-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.incidencia-id {
+    font-family: monospace;
+    font-size: 0.7rem;
+    color: var(--color-accent-primary);
+    background: rgba(0, 0, 0, 0.4);
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.incidencia-fecha {
+    font-size: 0.65rem;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.incidencia-body {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.incidencia-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.badge-riesgo-card, .badge-estado-card {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 500;
+}
+
+.incidencia-detalles {
+    font-size: 0.7rem;
+    color: var(--color-text-secondary);
+    flex: 1;
+    min-width: 150px;
+}
+
+.incidencia-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-pdf-card {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
+    border: 1px solid #c0392b;
+    border-radius: 6px;
+    padding: 6px 14px;
+    color: #c0392b;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s ease;
+}
+
+.btn-pdf-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(192, 57, 43, 0.3);
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+.btn-pdf-card.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+@media (max-width: 550px) {
+    .incidencia-body {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .incidencia-detalles {
+        width: 100%;
+    }
+    .incidencia-footer {
+        justify-content: center;
+    }
+    .btn-pdf-card {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* =============================================
+   BOTÓN PDF MINI (para tabla)
+   ============================================= */
+.btn-pdf-mini {
+    background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
+    border: 1px solid #c0392b;
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: #c0392b;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s ease;
+    letter-spacing: 0.3px;
+}
+
+.btn-pdf-mini:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(192, 57, 43, 0.3);
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+/* =============================================
+   FOOTER
+   ============================================= */
+.footer-datetime {
+    text-align: center;
+    margin-top: 25px;
+    padding: 10px;
+    color: var(--color-text-muted);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    font-size: var(--font-size-xs);
+}
+
+/* =============================================
+   ESTILOS PARA SWEETALERT
+   ============================================= */
+.swal2-popup-custom {
+    font-family: var(--font-family-secondary, 'Rajdhani', sans-serif);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    background: linear-gradient(135deg, rgba(10, 10, 10, 0.98), rgba(20, 20, 20, 0.98)) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.swal2-title-custom {
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif) !important;
+    font-weight: 600 !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    font-size: clamp(1rem, 4vw, 1.3rem) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 15px;
+    margin-bottom: 10px;
+}
+
+.swal-resumen-stats {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.swal-stats-grid {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.swal-stat-item {
+    flex: 1;
+    min-width: 100px;
+    text-align: center;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    border-left: 2px solid;
+    transition: all 0.2s ease;
+}
+
+.swal-stat-label {
+    font-size: clamp(0.6rem, 2.5vw, 0.7rem);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #9ca3af;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.swal-stat-value {
+    font-size: clamp(0.9rem, 3vw, 1.1rem);
+    font-weight: 700;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif);
+}
+
+.swal-registros-list {
+    max-height: 450px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.swal-registro-card {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.3));
+    border-radius: 14px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.swal-registro-card:hover {
+    transform: translateX(4px);
+    border-color: var(--color-accent-primary);
+}
+
+.swal-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px 8px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.swal-card-body {
+    padding: 10px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.swal-card-footer {
+    padding: 8px 14px 12px 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.swal2-confirm {
+    background: linear-gradient(145deg, #1a1a1a, #0f0f0f) !important;
+    border: 1px solid var(--color-accent-primary) !important;
+    border-radius: 10px !important;
+    padding: 10px 24px !important;
+    font-family: var(--font-family-primary, 'Orbitron', sans-serif) !important;
+    font-size: clamp(0.7rem, 2.5vw, 0.8rem) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+    transition: all 0.2s ease !important;
+}
+
+.swal-mas-registros {
+    text-align: center;
+    padding: 12px;
+    color: #9ca3af;
+    font-size: var(--font-size-small);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    margin-top: 8px;
+}
+
+/* =============================================
+   MEJORAS DE ACCESIBILIDAD Y SCROLL
+   ============================================= */
+button, 
+.btn-pdf-card,
+.btn-pdf-sucursal,
+.btn-volver,
+.sucursal-selector .filtro-select {
+    min-height: 44px;
+}
+
+@media (max-width: 768px) {
+    button, 
+    .btn-pdf-card,
+    .btn-pdf-sucursal,
+    .btn-volver,
+    .sucursal-selector .filtro-select {
+        min-height: 48px;
+    }
+}
+
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+img, video, iframe, canvas {
+    max-width: 100%;
+    height: auto;
+}
+
+p, h1, h2, h3, h4, h5, h6, span, div {
+    word-break: break-word;
+}
+
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-bg-tertiary);
+    border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-accent-primary);
+    border-radius: 8px;
+}
+
+/* =============================================
+   PANTALLAS GRANDES (4K)
+   ============================================= */
+@media (min-width: 1920px) {
+    .detalle-container {
+        max-width: 1800px;
+        padding: 40px;
+    }
+    
+    .kpi-info h3 {
+        font-size: 2.2rem;
+    }
+    
+    .card-header h5 {
+        font-size: 1rem;
+    }
+}
+
+/* =============================================
+   ANIMACIÓN SUAVE PARA LAS CARDS
+   ============================================= */
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* No aplicar hover a la card de incidencias si tiene scroll */
+.card.full-width:hover {
+    transform: none;
+}
+/* =============================================
+   RESPONSIVE - REORDENAR NIVELES RIESGO ARRIBA Y CATEGORÍAS ABAJO
+   ============================================= */
+
+/* En móvil (≤768px) - Reordenar usando flex order */
+@media (max-width: 768px) {
+    .charts-row {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    /* La card de Niveles de riesgo va primero (arriba) */
+    .charts-row .card:first-child {
+        order: 1;
+        margin-bottom: 0;
+    }
+    
+    /* La card de Categorías más reportadas va después (abajo) */
+    .charts-row .card:last-child {
+        order: 2;
+    }
+}
+
+/* Para móviles aún más pequeños, mantener el mismo comportamiento */
+@media (max-width: 550px) {
+    .charts-row {
+        gap: 15px;
+    }
+}
