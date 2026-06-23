@@ -2424,7 +2424,7 @@ class NavbarComplete {
                     </button>
 
                     <div class="admin-dropdown-options" id="adminDropdownOptions">
-                        <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
+                    <a href="/usuarios/administrador/administradorTemas/administradorTemas.html" class="admin-dropdown-option">
                             <i class="fa-solid fa-palette"></i>
                             <span>Personalización</span>
                         </a>

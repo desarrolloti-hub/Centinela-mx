@@ -840,6 +840,7 @@ select.form-input-field option:any {
     position: relative;
     overflow: hidden;
 }
+
 .action-btn::after {
     content: '';
     position: absolute;

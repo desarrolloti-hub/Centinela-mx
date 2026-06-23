@@ -1,5 +1,7 @@
 // /components/imagenEditorEvidencias.js
 // Componente reutilizable para el editor de imágenes con herramientas de dibujo
+// Modificado: permite mover las figuras después de dibujarlas
+// Mejoras: responsive perfecto + cursores dinámicos
 
 class ImageEditorModal {
     constructor() {
@@ -18,6 +20,14 @@ class ImageEditorModal {
         this.onSaveCallback = null;
         this.comentario = '';
 
+        // Variables para mover elementos
+        this.selectedElement = null;
+        this.isDragging = false;
+        this.dragStartX = 0;
+        this.dragStartY = 0;
+        this.dragOffsetX = 0;
+        this.dragOffsetY = 0;
+
         this.init();
     }
 
@@ -33,6 +43,7 @@ class ImageEditorModal {
         const styles = `
             /* =============================================
                MODAL EDITOR DE IMAGEN (COMPONENTE REUTILIZABLE)
+               VERSIÓN MEJORADA: RESPONSIVE + CURSORES DINÁMICOS
                ============================================= */
             .image-editor-modal {
                 display: none;
@@ -69,6 +80,8 @@ class ImageEditorModal {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                flex-wrap: wrap;
+                gap: 10px;
             }
 
             .image-editor-modal .modal-header h5 {
@@ -112,18 +125,20 @@ class ImageEditorModal {
                 overflow: auto;
             }
 
+            /* Layout flex que se adapta */
             .image-editor-modal .editor-layout {
                 display: flex;
                 gap: 20px;
                 height: 100%;
             }
 
+            /* Panel del canvas (ocupa más espacio) */
             .image-editor-modal .editor-canvas-panel {
                 flex: 2;
                 display: flex;
                 flex-direction: column;
                 gap: 15px;
-                min-width: 0;
+                min-width: 0; /* importante para evitar desborde */
             }
 
             .image-editor-modal .canvas-container {
@@ -134,16 +149,30 @@ class ImageEditorModal {
                 justify-content: center;
                 align-items: center;
                 border: 2px solid var(--color-border-light);
-                height: calc(100% - 50px);
+                flex: 1;
+                min-height: 0; /* para que respete el alto */
             }
 
             .image-editor-modal #modalImageCanvas {
                 max-width: 100%;
                 max-height: 100%;
                 object-fit: contain;
+                /* cursor por defecto: crosshair para dibujar */
                 cursor: crosshair;
             }
 
+            /* Cursores dinámicos según el estado */
+            .image-editor-modal #modalImageCanvas.moving {
+                cursor: grab !important;
+            }
+            .image-editor-modal #modalImageCanvas.grabbing {
+                cursor: grabbing !important;
+            }
+            .image-editor-modal #modalImageCanvas.drawing {
+                cursor: crosshair !important;
+            }
+
+            /* Panel de herramientas */
             .image-editor-modal .editor-tools-panel {
                 flex: 1;
                 min-width: 280px;
@@ -152,10 +181,13 @@ class ImageEditorModal {
                 padding: 20px;
                 border: 1px solid var(--color-border-light);
                 overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
             }
 
             .image-editor-modal .tools-section {
-                margin-bottom: 25px;
+                /* sin margin-bottom, usamos gap del padre */
             }
 
             .image-editor-modal .tools-section h6 {
@@ -208,10 +240,6 @@ class ImageEditorModal {
             .image-editor-modal .tool-btn-large i {
                 font-size: 24px;
                 color: var(--color-accent-primary);
-            }
-
-            .image-editor-modal .tool-btn-large.active i {
-                color: #000;
             }
 
             .image-editor-modal .color-picker {
@@ -271,6 +299,7 @@ class ImageEditorModal {
                 border-radius: var(--border-radius-small);
             }
 
+            /* ========== RESPONSIVE: MÓVIL ========== */
             @media (max-width: 768px) {
                 .image-editor-modal .editor-layout {
                     flex-direction: column;
@@ -282,12 +311,22 @@ class ImageEditorModal {
                     height: calc(100vh - 20px);
                 }
 
+                /* El canvas ocupa un alto fijo pero proporcionado */
                 .image-editor-modal .canvas-container {
-                    height: 400px;
+                    min-height: 300px;
+                    height: auto;
                 }
 
+                /* El panel de herramientas se coloca debajo y tiene altura limitada con scroll */
                 .image-editor-modal .editor-tools-panel {
                     min-width: auto;
+                    max-height: 40%;
+                    overflow-y: auto;
+                }
+
+                /* Ajustar grid de herramientas en móvil */
+                .image-editor-modal .tools-grid {
+                    grid-template-columns: 1fr 1fr;
                 }
             }
 
@@ -299,6 +338,10 @@ class ImageEditorModal {
                 .image-editor-modal .tools-grid {
                     grid-template-columns: 1fr;
                 }
+
+                .image-editor-modal .tool-btn-large {
+                    padding: 12px;
+                }
             }
         `;
 
@@ -309,7 +352,6 @@ class ImageEditorModal {
     }
 
     createModalStructure() {
-        // Verificar si ya existe el modal
         let existingModal = document.getElementById('imageEditorModal');
         if (existingModal) {
             existingModal.remove();
@@ -326,7 +368,6 @@ class ImageEditorModal {
                 </div>
                 <div class="modal-body">
                     <div class="editor-layout">
-                        <!-- Panel izquierdo - Canvas -->
                         <div class="editor-canvas-panel">
                             <div class="canvas-container">
                                 <canvas id="modalImageCanvas"></canvas>
@@ -335,13 +376,18 @@ class ImageEditorModal {
                                 Cargando imagen...
                             </div>
                         </div>
-
-                        <!-- Panel derecho - Herramientas -->
                         <div class="editor-tools-panel">
+                            <div class="tools-section">
+                                <h6>Selecciona un color para dibujar</h6>
+                                <div class="color-picker">
+                                    <input type="color" id="modalColorPicker" value="#ff0000">
+                                    <span class="color-value" id="modalColorValue">#ff0000</span>
+                                </div>
+                            </div>
                             <div class="tools-section">
                                 <h6>Herramientas de dibujo</h6>
                                 <div class="tools-grid">
-                                    <button type="button" class="tool-btn-large" id="modalToolCircle">
+                                    <button type="button" class="tool-btn-large active" id="modalToolCircle">
                                         <i class="fas fa-circle"></i>
                                         <span>Círculo</span>
                                     </button>
@@ -349,23 +395,17 @@ class ImageEditorModal {
                                         <i class="fas fa-arrow-right"></i>
                                         <span>Flecha</span>
                                     </button>
+                                    <button type="button" class="tool-btn-large" id="modalToolRectangle">
+                                        <i class="fas fa-square"></i>
+                                        <span>Rectángulo</span>
+                                    </button>
                                 </div>
                             </div>
-
-                            <div class="tools-section">
-                                <h6>Color</h6>
-                                <div class="color-picker">
-                                    <input type="color" id="modalColorPicker" value="#ff0000">
-                                    <span class="color-value" id="modalColorValue">#ff0000</span>
-                                </div>
-                            </div>
-
                             <div class="tools-section">
                                 <h6>Comentario</h6>
                                 <textarea id="modalComentario" class="form-control" rows="3"
                                     placeholder="Agrega un comentario"></textarea>
                             </div>
-
                             <div class="tools-section">
                                 <h6>Acciones</h6>
                                 <div class="action-buttons-vertical">
@@ -403,14 +443,20 @@ class ImageEditorModal {
 
         document.getElementById('modalToolCircle')?.addEventListener('click', () => {
             this.setTool('circle');
-            document.getElementById('modalToolCircle').classList.add('active');
-            document.getElementById('modalToolArrow').classList.remove('active');
+            this.updateActiveTool('modalToolCircle');
+            this.updateCursorStyle();
         });
 
         document.getElementById('modalToolArrow')?.addEventListener('click', () => {
             this.setTool('arrow');
-            document.getElementById('modalToolArrow').classList.add('active');
-            document.getElementById('modalToolCircle').classList.remove('active');
+            this.updateActiveTool('modalToolArrow');
+            this.updateCursorStyle();
+        });
+
+        document.getElementById('modalToolRectangle')?.addEventListener('click', () => {
+            this.setTool('rectangle');
+            this.updateActiveTool('modalToolRectangle');
+            this.updateCursorStyle();
         });
 
         document.getElementById('modalColorPicker')?.addEventListener('input', (e) => {
@@ -420,7 +466,9 @@ class ImageEditorModal {
 
         document.getElementById('modalLimpiarTodo')?.addEventListener('click', () => {
             this.elements = [];
+            this.selectedElement = null;
             this.redrawCanvas();
+            this.updateCursorStyle();
         });
 
         document.getElementById('modalGuardarCambios')?.addEventListener('click', () => {
@@ -428,15 +476,78 @@ class ImageEditorModal {
         });
 
         if (this.canvas) {
-            this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
-            this.canvas.addEventListener('mousemove', (e) => this.draw(e));
-            this.canvas.addEventListener('mouseup', () => this.stopDrawing());
-            this.canvas.addEventListener('mouseout', () => this.stopDrawing());
+            // Eventos para dibujar y mover
+            this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+            this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+            this.canvas.addEventListener('mouseup', () => this.handleMouseUp());
+            this.canvas.addEventListener('mouseout', () => this.handleMouseUp());
+
+            // Detectar movimiento sobre el canvas para cambiar cursor si hay elemento debajo
+            this.canvas.addEventListener('mousemove', (e) => this.onCanvasMouseMove(e));
         }
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.modal.style.display === 'block') {
                 this.hide();
+            }
+            // Eliminar elemento seleccionado con Delete o Supr
+            if ((e.key === 'Delete' || e.key === 'Supr') && this.selectedElement) {
+                const index = this.elements.indexOf(this.selectedElement);
+                if (index !== -1) {
+                    this.elements.splice(index, 1);
+                    this.selectedElement = null;
+                    this.redrawCanvas();
+                    this.updateCursorStyle();
+                }
+                e.preventDefault();
+            }
+        });
+    }
+
+    // Actualiza la clase CSS del canvas según el estado
+    updateCursorStyle() {
+        if (!this.canvas) return;
+        // Remover clases
+        this.canvas.classList.remove('moving', 'grabbing', 'drawing');
+        if (this.isDragging && this.selectedElement) {
+            this.canvas.classList.add('grabbing');
+        } else if (this.selectedElement && !this.isDrawing) {
+            this.canvas.classList.add('moving');
+        } else {
+            this.canvas.classList.add('drawing');
+        }
+    }
+
+    // Cambia el cursor cuando el ratón pasa sobre una figura movible
+    onCanvasMouseMove(e) {
+        if (!this.image || this.isDrawing || this.isDragging) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
+
+        const element = this.getElementAt(mouseX, mouseY);
+        if (element) {
+            this.canvas.classList.add('moving');
+            this.canvas.classList.remove('drawing');
+        } else {
+            this.canvas.classList.remove('moving');
+            this.canvas.classList.add('drawing');
+        }
+    }
+
+    updateActiveTool(activeId) {
+        const tools = ['modalToolCircle', 'modalToolArrow', 'modalToolRectangle'];
+        tools.forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                if (id === activeId) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
             }
         });
     }
@@ -449,17 +560,21 @@ class ImageEditorModal {
         this.comentario = comentario;
         this.onSaveCallback = onSaveCallback;
         this.elements = [];
+        this.selectedElement = null;
 
-        document.getElementById('modalToolCircle')?.classList.add('active');
-        document.getElementById('modalToolArrow')?.classList.remove('active');
-        this.currentTool = 'circle';
+        // Activar herramienta por defecto: círculo
+        this.setTool('circle');
+        this.updateActiveTool('modalToolCircle');
+        this.updateCursorStyle();
 
         const reader = new FileReader();
         reader.onload = (e) => {
             this.image = new Image();
             this.image.onload = () => {
-                const maxWidth = 1200;
-                const maxHeight = 800;
+                // Calcular dimensiones máximas para que quepa en el contenedor
+                const container = this.canvas.parentElement;
+                const maxWidth = container.clientWidth - 40;
+                const maxHeight = container.clientHeight - 40;
                 let width = this.image.width;
                 let height = this.image.height;
 
@@ -487,6 +602,31 @@ class ImageEditorModal {
 
         this.modal.style.display = 'block';
         document.body.style.overflow = 'hidden';
+        
+        // Escuchar cambios de tamaño de la ventana para reajustar
+        window.addEventListener('resize', () => this.handleResize());
+    }
+
+    handleResize() {
+        if (!this.modal || this.modal.style.display !== 'block' || !this.image) return;
+        const container = this.canvas.parentElement;
+        const maxWidth = container.clientWidth - 40;
+        const maxHeight = container.clientHeight - 40;
+        let width = this.image.width;
+        let height = this.image.height;
+        if (width > maxWidth) {
+            height = (maxWidth / width) * height;
+            width = maxWidth;
+        }
+        if (height > maxHeight) {
+            width = (maxHeight / height) * width;
+            height = maxHeight;
+        }
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.redrawCanvas();
+        document.getElementById('modalImageInfo').textContent =
+            `Editando: ${this.currentFile.name} (${Math.round(width)}x${Math.round(height)})`;
     }
 
     hide() {
@@ -495,10 +635,13 @@ class ImageEditorModal {
         document.body.style.overflow = 'auto';
         this.image = null;
         this.elements = [];
+        this.selectedElement = null;
+        window.removeEventListener('resize', () => this.handleResize());
     }
 
     setTool(tool) {
         this.currentTool = tool;
+        this.updateCursorStyle();
     }
 
     redrawCanvas() {
@@ -507,155 +650,289 @@ class ImageEditorModal {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.ctx.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
 
+        // Dibujar todos los elementos
         this.elements.forEach(el => {
-            this.ctx.beginPath();
-            this.ctx.strokeStyle = el.color;
-            this.ctx.lineWidth = 3;
-
-            if (el.type === 'circle') {
-                this.ctx.arc(el.x, el.y, el.radius, 0, 2 * Math.PI);
-                this.ctx.stroke();
-            } else if (el.type === 'arrow') {
-                const angle = Math.atan2(el.endY - el.startY, el.endX - el.startX);
-                const arrowLength = 15;
-
-                this.ctx.beginPath();
-                this.ctx.moveTo(el.startX, el.startY);
-                this.ctx.lineTo(el.endX, el.endY);
-                this.ctx.stroke();
-
-                this.ctx.beginPath();
-                this.ctx.moveTo(el.endX, el.endY);
-                this.ctx.lineTo(
-                    el.endX - arrowLength * Math.cos(angle - Math.PI / 6),
-                    el.endY - arrowLength * Math.sin(angle - Math.PI / 6)
-                );
-                this.ctx.lineTo(
-                    el.endX - arrowLength * Math.cos(angle + Math.PI / 6),
-                    el.endY - arrowLength * Math.sin(angle + Math.PI / 6)
-                );
-                this.ctx.closePath();
-                this.ctx.fillStyle = el.color;
-                this.ctx.fill();
-            }
+            this.drawElement(el, false);
         });
-    }
 
-    hexToRgba(hex, alpha) {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-
-    startDrawing(e) {
-        if (!this.image || !this.canvas) return;
-
-        this.isDrawing = true;
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-
-        this.startX = (e.clientX - rect.left) * scaleX;
-        this.startY = (e.clientY - rect.top) * scaleY;
-    }
-
-    draw(e) {
-        if (!this.isDrawing || !this.image || !this.canvas || !this.ctx) return;
-
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-
-        const currentX = (e.clientX - rect.left) * scaleX;
-        const currentY = (e.clientY - rect.top) * scaleY;
-
-        this.redrawCanvas();
-        this.ctx.beginPath();
-        this.ctx.strokeStyle = this.currentColor;
-        this.ctx.lineWidth = 3;
-
-        if (this.currentTool === 'circle') {
-            const radius = Math.sqrt(
-                Math.pow(currentX - this.startX, 2) +
-                Math.pow(currentY - this.startY, 2)
-            );
-            this.ctx.arc(this.startX, this.startY, radius, 0, 2 * Math.PI);
-            this.ctx.stroke();
-        } else if (this.currentTool === 'arrow') {
-            this.ctx.moveTo(this.startX, this.startY);
-            this.ctx.lineTo(currentX, currentY);
-            this.ctx.stroke();
-
-            const angle = Math.atan2(currentY - this.startY, currentX - this.startX);
-            const arrowLength = 15;
-
-            this.ctx.beginPath();
-            this.ctx.moveTo(currentX, currentY);
-            this.ctx.lineTo(
-                currentX - arrowLength * Math.cos(angle - Math.PI / 6),
-                currentY - arrowLength * Math.sin(angle - Math.PI / 6)
-            );
-            this.ctx.lineTo(
-                currentX - arrowLength * Math.cos(angle + Math.PI / 6),
-                currentY - arrowLength * Math.sin(angle + Math.PI / 6)
-            );
-            this.ctx.closePath();
-            this.ctx.fillStyle = this.currentColor;
-            this.ctx.fill();
+        // Si hay un elemento seleccionado, dibujarlo con resaltado
+        if (this.selectedElement) {
+            this.drawElement(this.selectedElement, true);
         }
     }
 
-    stopDrawing() {
-        if (!this.isDrawing || !this.image || !this.canvas) return;
+    drawElement(el, highlight = false) {
+        if (!this.ctx) return;
+
+        this.ctx.save();
+        if (highlight) {
+            this.ctx.shadowBlur = 10;
+            this.ctx.shadowColor = '#00cfff';
+        }
+
+        this.ctx.beginPath();
+        this.ctx.strokeStyle = el.color;
+        this.ctx.fillStyle = el.color;
+        this.ctx.lineWidth = 3;
+
+        if (el.type === 'circle') {
+            this.ctx.arc(el.x, el.y, el.radius, 0, 2 * Math.PI);
+            this.ctx.stroke();
+        } else if (el.type === 'arrow') {
+            const angle = Math.atan2(el.endY - el.startY, el.endX - el.startX);
+            const arrowLength = 15;
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(el.startX, el.startY);
+            this.ctx.lineTo(el.endX, el.endY);
+            this.ctx.stroke();
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(el.endX, el.endY);
+            this.ctx.lineTo(
+                el.endX - arrowLength * Math.cos(angle - Math.PI / 6),
+                el.endY - arrowLength * Math.sin(angle - Math.PI / 6)
+            );
+            this.ctx.lineTo(
+                el.endX - arrowLength * Math.cos(angle + Math.PI / 6),
+                el.endY - arrowLength * Math.sin(angle + Math.PI / 6)
+            );
+            this.ctx.closePath();
+            this.ctx.fillStyle = el.color;
+            this.ctx.fill();
+        } else if (el.type === 'rectangle') {
+            this.ctx.strokeRect(el.x, el.y, el.width, el.height);
+        }
+
+        this.ctx.restore();
+    }
+
+    // Encontrar qué elemento está bajo el cursor
+    getElementAt(x, y) {
+        for (let i = this.elements.length - 1; i >= 0; i--) {
+            const el = this.elements[i];
+            if (el.type === 'circle') {
+                const dx = x - el.x;
+                const dy = y - el.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (Math.abs(dist - el.radius) <= 10) {
+                    return el;
+                }
+            } else if (el.type === 'arrow') {
+                const ax = el.endX - el.startX;
+                const ay = el.endY - el.startY;
+                const len = Math.sqrt(ax * ax + ay * ay);
+                if (len === 0) continue;
+                const u = ((x - el.startX) * ax + (y - el.startY) * ay) / (len * len);
+                if (u >= 0 && u <= 1) {
+                    const ix = el.startX + u * ax;
+                    const iy = el.startY + u * ay;
+                    const dist = Math.hypot(x - ix, y - iy);
+                    if (dist <= 10) return el;
+                }
+                const angle = Math.atan2(ay, ax);
+                const arrowLength = 15;
+                const tipX = el.endX;
+                const tipY = el.endY;
+                const leftX = tipX - arrowLength * Math.cos(angle - Math.PI / 6);
+                const leftY = tipY - arrowLength * Math.sin(angle - Math.PI / 6);
+                const rightX = tipX - arrowLength * Math.cos(angle + Math.PI / 6);
+                const rightY = tipY - arrowLength * Math.sin(angle + Math.PI / 6);
+                if (this.pointInTriangle(x, y, tipX, tipY, leftX, leftY, rightX, rightY)) {
+                    return el;
+                }
+            } else if (el.type === 'rectangle') {
+                const left = Math.min(el.x, el.x + el.width);
+                const right = Math.max(el.x, el.x + el.width);
+                const top = Math.min(el.y, el.y + el.height);
+                const bottom = Math.max(el.y, el.y + el.height);
+                if (x >= left - 5 && x <= right + 5 && y >= top - 5 && y <= bottom + 5) {
+                    if (x >= left && x <= right && y >= top && y <= bottom) return el;
+                    if (Math.abs(x - left) <= 10 || Math.abs(x - right) <= 10 ||
+                        Math.abs(y - top) <= 10 || Math.abs(y - bottom) <= 10) {
+                        return el;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    pointInTriangle(px, py, ax, ay, bx, by, cx, cy) {
+        const v0x = cx - ax;
+        const v0y = cy - ay;
+        const v1x = bx - ax;
+        const v1y = by - ay;
+        const v2x = px - ax;
+        const v2y = py - ay;
+        const dot00 = v0x * v0x + v0y * v0y;
+        const dot01 = v0x * v1x + v0y * v1y;
+        const dot02 = v0x * v2x + v0y * v2y;
+        const dot11 = v1x * v1x + v1y * v1y;
+        const dot12 = v1x * v2x + v1y * v2y;
+        const invDenom = 1 / (dot00 * dot11 - dot01 * dot01);
+        const u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+        const v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+        return (u >= 0) && (v >= 0) && (u + v < 1);
+    }
+
+    handleMouseDown(e) {
+        if (!this.image || !this.canvas) return;
 
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = this.canvas.width / rect.width;
         const scaleY = this.canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
 
-        const lastMouseMove = (e) => {
-            const currentX = (e.clientX - rect.left) * scaleX;
-            const currentY = (e.clientY - rect.top) * scaleY;
+        const element = this.getElementAt(mouseX, mouseY);
+        if (element) {
+            this.selectedElement = element;
+            this.isDragging = true;
+            this.dragStartX = mouseX;
+            this.dragStartY = mouseY;
+            if (element.type === 'circle') {
+                this.dragOffsetX = element.x - mouseX;
+                this.dragOffsetY = element.y - mouseY;
+            } else if (element.type === 'arrow') {
+                this.dragOffsetX = element.startX - mouseX;
+                this.dragOffsetY = element.startY - mouseY;
+            } else if (element.type === 'rectangle') {
+                this.dragOffsetX = element.x - mouseX;
+                this.dragOffsetY = element.y - mouseY;
+            }
+            this.redrawCanvas();
+            this.updateCursorStyle();
+            e.preventDefault();
+            return;
+        }
+
+        this.selectedElement = null;
+        this.isDrawing = true;
+        this.startX = mouseX;
+        this.startY = mouseY;
+        this.updateCursorStyle();
+    }
+
+    handleMouseMove(e) {
+        if (!this.image || !this.canvas) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
+
+        if (this.isDragging && this.selectedElement) {
+            const el = this.selectedElement;
+            const newX = mouseX + this.dragOffsetX;
+            const newY = mouseY + this.dragOffsetY;
+            if (el.type === 'circle') {
+                el.x = newX;
+                el.y = newY;
+            } else if (el.type === 'arrow') {
+                const dx = el.endX - el.startX;
+                const dy = el.endY - el.startY;
+                el.startX = newX;
+                el.startY = newY;
+                el.endX = el.startX + dx;
+                el.endY = el.startY + dy;
+            } else if (el.type === 'rectangle') {
+                el.x = newX;
+                el.y = newY;
+            }
+            this.redrawCanvas();
+            e.preventDefault();
+        } else if (this.isDrawing) {
+            this.redrawCanvas();
+            this.ctx.save();
+            this.ctx.strokeStyle = this.currentColor;
+            this.ctx.fillStyle = this.currentColor;
+            this.ctx.lineWidth = 3;
+
+            const dx = mouseX - this.startX;
+            const dy = mouseY - this.startY;
 
             if (this.currentTool === 'circle') {
-                const radius = Math.sqrt(
-                    Math.pow(currentX - this.startX, 2) +
-                    Math.pow(currentY - this.startY, 2)
-                );
-
-                if (radius > 5) {
-                    this.elements.push({
-                        type: 'circle',
-                        x: this.startX,
-                        y: this.startY,
-                        radius: radius,
-                        color: this.currentColor
-                    });
-                }
+                const radius = Math.sqrt(dx * dx + dy * dy);
+                this.ctx.beginPath();
+                this.ctx.arc(this.startX, this.startY, radius, 0, 2 * Math.PI);
+                this.ctx.stroke();
             } else if (this.currentTool === 'arrow') {
-                const distance = Math.sqrt(
-                    Math.pow(currentX - this.startX, 2) +
-                    Math.pow(currentY - this.startY, 2)
-                );
-
-                if (distance > 5) {
-                    this.elements.push({
-                        type: 'arrow',
-                        startX: this.startX,
-                        startY: this.startY,
-                        endX: currentX,
-                        endY: currentY,
-                        color: this.currentColor
-                    });
-                }
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.startX, this.startY);
+                this.ctx.lineTo(mouseX, mouseY);
+                this.ctx.stroke();
+                const angle = Math.atan2(dy, dx);
+                const arrowLength = 15;
+                this.ctx.beginPath();
+                this.ctx.moveTo(mouseX, mouseY);
+                this.ctx.lineTo(mouseX - arrowLength * Math.cos(angle - Math.PI / 6),
+                    mouseY - arrowLength * Math.sin(angle - Math.PI / 6));
+                this.ctx.lineTo(mouseX - arrowLength * Math.cos(angle + Math.PI / 6),
+                    mouseY - arrowLength * Math.sin(angle + Math.PI / 6));
+                this.ctx.closePath();
+                this.ctx.fill();
+            } else if (this.currentTool === 'rectangle') {
+                this.ctx.strokeRect(this.startX, this.startY, dx, dy);
             }
+            this.ctx.restore();
+        }
+    }
 
-            this.redrawCanvas();
-            document.removeEventListener('mousemove', lastMouseMove);
-        };
+    handleMouseUp() {
+        if (this.isDrawing) {
+            if (this.image && this.canvas) {
+                const onMouseUpFinal = (e) => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const scaleX = this.canvas.width / rect.width;
+                    const scaleY = this.canvas.height / rect.height;
+                    const endX = (e.clientX - rect.left) * scaleX;
+                    const endY = (e.clientY - rect.top) * scaleY;
+                    const dx = endX - this.startX;
+                    const dy = endY - this.startY;
+                    const minDistance = 5;
 
-        document.addEventListener('mousemove', lastMouseMove);
+                    if (Math.abs(dx) > minDistance || Math.abs(dy) > minDistance) {
+                        if (this.currentTool === 'circle') {
+                            const radius = Math.sqrt(dx * dx + dy * dy);
+                            this.elements.push({
+                                type: 'circle',
+                                x: this.startX,
+                                y: this.startY,
+                                radius: radius,
+                                color: this.currentColor
+                            });
+                        } else if (this.currentTool === 'arrow') {
+                            this.elements.push({
+                                type: 'arrow',
+                                startX: this.startX,
+                                startY: this.startY,
+                                endX: endX,
+                                endY: endY,
+                                color: this.currentColor
+                            });
+                        } else if (this.currentTool === 'rectangle') {
+                            this.elements.push({
+                                type: 'rectangle',
+                                x: this.startX,
+                                y: this.startY,
+                                width: dx,
+                                height: dy,
+                                color: this.currentColor
+                            });
+                        }
+                    }
+                    this.redrawCanvas();
+                    document.removeEventListener('mouseup', onMouseUpFinal);
+                };
+                document.addEventListener('mouseup', onMouseUpFinal);
+            }
+        }
         this.isDrawing = false;
+        this.isDragging = false;
+        this.selectedElement = null;
+        this.updateCursorStyle();
     }
 
     saveImage() {
@@ -677,5 +954,4 @@ class ImageEditorModal {
     }
 }
 
-// Hacer disponible globalmente
 window.ImageEditorModal = ImageEditorModal;

@@ -3559,7 +3559,7 @@ class NavbarComplete {
     }
 
     redirectToLogin() {
-        window.location.href = `/index.html`;
+        window.location.href = `/usuarios/visitantes/inicioSesion/inicioSesion.html`;
     }
 
     toggleGestionarDropdown(show) {
