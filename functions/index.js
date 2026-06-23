@@ -1,4 +1,5 @@
 // /functions/index.js
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 admin.initializeApp();
@@ -423,7 +424,7 @@ exports.proxyPowerManage = functions.https.onRequest((req, res) => {
 
 // ========== FUNCIÓN PROGRAMADA: Generar snapshots diarios ==========
 // Se ejecuta cada día a la 00:00 AM (hora de la Ciudad de México)
-
+/*
 exports.generarSnapshotsDiarios = functions.pubsub
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
   .pubsub.schedule("0 0 * * *")
@@ -464,6 +465,7 @@ exports.generarSnapshotsDiarios = functions.pubsub
       return null;
     }
   });
+*/
 
 // ========== FUNCIONES AUXILIARES ==========
 
