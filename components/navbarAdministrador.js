@@ -2765,7 +2765,7 @@ class NavbarComplete {
     }
 
     redirectToLogin() {
-        const loginUrl = `/index.html`;
+        const loginUrl = `/usuarios/visitantes/inicioSesion/inicioSesion.html`;
         window.location.href = loginUrl;
         setTimeout(() => window.location.replace(loginUrl), 1000);
     }
