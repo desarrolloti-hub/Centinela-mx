@@ -375,6 +375,7 @@ class Evento {
                                     const evento = new Evento(doc.id, { ...data, id: doc.id });
 
                                     if (evento.estadoEvento === 'pendiente') {
+                                        console.log(`🆕 Nuevo evento pendiente: ${evento.id}`);
                                         onNuevoEvento(evento);
                                     }
                                 }
@@ -487,6 +488,7 @@ class Evento {
                     'Seguridad',           // los eventos siempre van al área de Seguridad
                     organizacion
                 );
+                console.log(`✅ Notificación ${notificacionId} eliminada para toda el área de Seguridad`);
             } else {
                 console.warn(`⚠️ No se encontró notificación para el evento ${this.id}`);
             }
@@ -659,6 +661,7 @@ class Evento {
             }
 
             const tiempoFin = performance.now();
+            console.log(`⚡ Eventos cargados: ${(tiempoFin - tiempoInicio).toFixed(0)}ms | Página ${pagina} | Total: ${total}`);
 
             return {
                 eventos,
@@ -722,6 +725,7 @@ class Evento {
                                 const evento = new Evento(doc.id, { ...data, id: doc.id });
 
                                 if (evento.estadoEvento === 'pendiente') {
+                                    console.log(`🆕 Nuevo evento en tiempo real: ${evento.id}`);
                                     onNuevoEvento(evento);
                                 }
                             }
