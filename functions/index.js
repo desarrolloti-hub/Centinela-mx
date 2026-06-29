@@ -48,12 +48,10 @@ exports.sendPushNotification = functions.https.onRequest(async (req, res) => {
 
   // Para colaboradores, necesitamos la organización
   if (userType === "colaborador" && !organizacionCamelCase) {
-    res
-      .status(400)
-      .json({
-        success: false,
-        error: "Para colaboradores, se requiere organizacionCamelCase",
-      });
+    res.status(400).json({
+      success: false,
+      error: "Para colaboradores, se requiere organizacionCamelCase",
+    });
     return;
   }
 
@@ -268,12 +266,10 @@ exports.proxyPowerManage = functions.https.onRequest((req, res) => {
             !panel_data.panel_serial ||
             !panel_data.user_code
           ) {
-            return res
-              .status(400)
-              .json({
-                error_message:
-                  "Faltan datos: panel_serial y user_code son requeridos",
-              });
+            return res.status(400).json({
+              error_message:
+                "Faltan datos: panel_serial y user_code son requeridos",
+            });
           }
 
           const loginRes = await axios.post(
@@ -422,14 +418,16 @@ exports.proxyPowerManage = functions.https.onRequest((req, res) => {
   });
 });
 
-// ========== FUNCIÓN PROGRAMADA: Generar snapshots diarios ==========
-// Se ejecuta cada día a la 00:00 AM (hora de la Ciudad de México)
-/*
-exports.generarSnapshotsDiarios = functions.pubsub
-  .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .pubsub.schedule("0 0 * * *")
-  .timeZone("America/Mexico_City")
-  .onRun(async (context) => {
+// ========== FUNCIÓN PROGRAMADA: Generar snapshots diarios (CORREGIDA v2) ==========
+// Se ejecuta cada día a las 00:00 AM (hora de la Ciudad de México)
+exports.generarSnapshotsDiarios = onSchedule(
+  {
+    schedule: "0 0 * * *",
+    timeZone: "America/Mexico_City",
+    timeoutSeconds: 540,
+    memory: "1GB",
+  },
+  async (event) => {
     console.log("📅 Iniciando generación diaria de snapshots...");
 
     try {
@@ -464,8 +462,8 @@ exports.generarSnapshotsDiarios = functions.pubsub
       console.error("Error general en la tarea programada:", error);
       return null;
     }
-  });
-*/
+  },
+);
 
 // ========== FUNCIONES AUXILIARES ==========
 
